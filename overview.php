@@ -2,7 +2,7 @@
 $stats = [
     ['label' => 'Active employees', 'value' => '9', 'note' => '1 on leave', 'icon' => 'users', 'tone' => 'violet'],
     ['label' => 'Avg. time-to-hire', 'value' => '47d', 'note' => '3 hires tracked', 'icon' => 'person-add', 'tone' => 'cyan'],
-    ['label' => 'Open HR records', 'value' => '2', 'note' => 'warnings, memos, violations', 'icon' => 'gavel', 'tone' => 'rose'],
+    ['label' => 'Open HR records', 'value' => '2', 'note' => 'warnings, memos, violations', 'icon' => 'clipboard', 'tone' => 'amber'],
     ['label' => 'Annual payroll', 'value' => '&#8369;28.3M', 'note' => 'base salaries of active staff', 'icon' => 'wallet', 'tone' => 'mint'],
 ];
 $departments = [
@@ -32,6 +32,16 @@ $actions = [
     ['icon' => 'badge-check', 'title' => 'Review probation', 'detail' => '1 employee in probation', 'href' => 'employees.php'],
     ['icon' => 'arrow-up-right', 'title' => 'Update job titles', 'detail' => 'Keep salary bands and levels current', 'href' => 'settings.php'],
 ];
+$navItems = [
+    ['title' => 'Overview', 'icon' => 'grid', 'href' => 'overview.php'],
+    ['title' => 'Employees', 'icon' => 'users', 'href' => 'employees.php'],
+    ['title' => 'Hiring', 'icon' => 'person-add', 'href' => 'hiring.php', 'badge' => 2],
+    ['title' => 'Onboarding', 'icon' => 'sparkles', 'href' => 'onboarding.php'],
+    ['title' => 'Performance', 'icon' => 'performance', 'href' => 'performance.php'],
+    ['title' => 'HR Records', 'icon' => 'gavel', 'href' => 'hr-records.php'],
+    ['title' => 'Leave', 'icon' => 'calendar', 'href' => 'leave.php', 'badge' => 2],
+    ['title' => 'Settings', 'icon' => 'settings', 'href' => 'settings.php'],
+];
 
 function dashboard_icon(string $name): string
 {
@@ -40,7 +50,9 @@ function dashboard_icon(string $name): string
         'users' => '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
         'person-add' => '<path d="M15 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/>',
         'sparkles' => '<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z"/><path d="m19 14 1.2 2.8L23 18l-2.8 1.2L19 22l-1.2-2.8L15 18l2.8-1.2L19 14Z"/>',
+        'performance' => '<path d="M12 3 14.3 4.2l2.6-.1 1.2 2.2 2.2 1.3-.5 2.6.5 2.6-2.2 1.3-1.2 2.2-2.6-.1L12 17l-2.3 1.2-2.6-.1-1.2-2.2-2.2-1.3.5-2.6-.5-2.6 2.2-1.3 1.2-2.2 2.6.1L12 3Z"/><path d="m9 10.5 2 2 4-4"/>',
         'gavel' => '<path d="m14 13 7-7-3-3-7 7M5 21l8-8M7 8l3-3 9 9-3 3z"/>',
+        'clipboard' => '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1ZM8 11h8M8 15h8"/>',
         'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M12 15v3m-1.5-1.5h3"/>',
         'settings' => '<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.7-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.7a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.7 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z"/>',
         'wallet' => '<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 8h18M16 14h2"/><path d="M3 5V4a2 2 0 0 1 2-2h13"/>',
@@ -59,9 +71,9 @@ function dashboard_icon(string $name): string
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Overview - EMS</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css?v=<?= (int) filemtime(__DIR__ . '/dashboard.css') ?>">
 </head>
-<body class="overview-dashboard">
+<body class="module-dashboard">
     <aside class="sidebar">
         <a class="logo" href="overview.php" aria-label="EMS People Operations home">
             <span class="logo-icon"><?= dashboard_icon('users') ?></span>
@@ -69,18 +81,22 @@ function dashboard_icon(string $name): string
         </a>
         <div class="sidebar-category">Workspace</div>
         <nav class="sidebar-menu" aria-label="Workspace navigation">
-            <a class="nav-link active" href="overview.php" aria-current="page"><?= dashboard_icon('grid') ?><span>Overview</span></a>
-            <a class="nav-link" href="employees.php"><?= dashboard_icon('users') ?><span>Employees</span></a>
-            <a class="nav-link" href="hiring.php"><?= dashboard_icon('person-add') ?><span>Hiring</span><span class="badge">2</span></a>
-            <a class="nav-link" href="onboarding.php"><?= dashboard_icon('sparkles') ?><span>Onboarding</span></a>
-            <a class="nav-link" href="performance.php"><?= dashboard_icon('badge-check') ?><span>Performance</span></a>
-            <a class="nav-link" href="hr-records.php"><?= dashboard_icon('gavel') ?><span>HR Records</span></a>
-            <a class="nav-link" href="leave.php"><?= dashboard_icon('calendar') ?><span>Leave</span><span class="badge">2</span></a>
-            <a class="nav-link" href="settings.php"><?= dashboard_icon('settings') ?><span>Settings</span></a>
+            <?php foreach ($navItems as $index => $item): ?>
+                <a class="nav-link<?= $index === 0 ? ' active' : '' ?>" href="<?= htmlspecialchars($item['href']) ?>"<?= $index === 0 ? ' aria-current="page"' : '' ?>>
+                    <?= dashboard_icon($item['icon']) ?><span><?= htmlspecialchars($item['title']) ?></span>
+                    <?php if (!empty($item['badge'])): ?><span class="badge"><?= (int) $item['badge'] ?></span><?php endif; ?>
+                </a>
+            <?php endforeach; ?>
         </nav>
         <div class="sidebar-bottom">
-            <div class="user-profile"><strong>Signed in</strong><span>workspace member</span></div>
-            <a class="sign-out" href="index.html"><?= dashboard_icon('logout') ?><span>Sign out</span></a>
+            <details class="account-menu">
+                <summary class="account-trigger">
+                    <span class="account-avatar" aria-hidden="true">JD</span>
+                    <span class="account-name">John Doe</span>
+                    <span class="account-caret" aria-hidden="true"></span>
+                </summary>
+                <a class="sign-out" href="#"><?= dashboard_icon('logout') ?><span>Sign out</span></a>
+            </details>
         </div>
     </aside>
 
@@ -92,9 +108,9 @@ function dashboard_icon(string $name): string
                 <div><h1 id="welcome-title">Welcome</h1><p class="page-subtitle">Your people operations at a glance — pipeline, performance, records and time off.</p></div>
             </section>
 
-            <section class="grid grid-4 dashboard-stats" aria-label="People operations summary">
+            <section class="grid grid-4 dashboard-stats metrics-grid" aria-label="People operations summary">
                 <?php foreach ($stats as $stat): ?>
-                    <article class="card stat-card dashboard-stat">
+                    <article class="card stat-card dashboard-stat <?= $stat['label'] === 'Annual payroll' ? 'card-featured' : '' ?>">
                         <div><span class="card-header"><?= htmlspecialchars($stat['label']) ?></span><strong class="stat-value"><?= $stat['value'] ?></strong><span class="stat-desc"><?= htmlspecialchars($stat['note']) ?></span></div>
                         <span class="stat-icon <?= htmlspecialchars($stat['tone']) ?>"><?= dashboard_icon($stat['icon']) ?></span>
                     </article>
@@ -104,15 +120,19 @@ function dashboard_icon(string $name): string
             <section class="grid grid-2 dashboard-charts" aria-label="Workforce charts">
                 <article class="card chart-card performance-card">
                     <div class="section-title"><div><h2>Performance trend</h2><p>Average evaluation score by period</p></div></div>
-                    <div class="performance-chart" role="img" aria-label="Average performance score increased from 90 in 2026 Q1 to 93 in 2026 Q2">
+                    <div class="performance-chart" role="img" aria-label="Average performance scores fluctuated across 2026: 78 in Q1, 91 in Q2, 84 in Q3, and 94 in Q4">
                         <div class="chart-y-labels"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
                         <div class="chart-plot">
                             <div class="chart-gridlines"><i></i><i></i><i></i><i></i><i></i></div>
                             <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
-                                <path class="chart-area" d="M0 20 L600 14 L600 200 L0 200 Z"></path>
-                                <path class="chart-stroke" d="M0 20 L600 14"></path>
+                                <path class="chart-area" d="M0 44 C70 44 130 18 200 18 S330 32 400 32 S530 12 600 12 L600 200 L0 200 Z"></path>
+                                <path class="chart-stroke" d="M0 44 C70 44 130 18 200 18 S330 32 400 32 S530 12 600 12"></path>
+                                <circle class="chart-point" cx="0" cy="44" r="4"></circle>
+                                <circle class="chart-point" cx="200" cy="18" r="4"></circle>
+                                <circle class="chart-point" cx="400" cy="32" r="4"></circle>
+                                <circle class="chart-point" cx="600" cy="12" r="4"></circle>
                             </svg>
-                            <div class="chart-x-labels"><span>2026 Q1</span><span>2026 Q2</span></div>
+                            <div class="chart-x-labels"><span>2026 Q1</span><span>2026 Q2</span><span>2026 Q3</span><span>2026 Q4</span></div>
                         </div>
                     </div>
                 </article>

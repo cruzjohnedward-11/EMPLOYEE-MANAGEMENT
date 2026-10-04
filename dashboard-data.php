@@ -67,6 +67,13 @@ $evaluations = [
     ['employee' => 'Devon Park', 'initials' => 'DP', 'department' => 'Engineering', 'period' => '2026 Q2', 'score' => 92, 'status' => 'Acknowledged', 'reviewer' => 'Amara Chen', 'note' => 'Shipped v2 platform migration ahead of schedule'],
 ];
 
+$certifications = [
+    ['employee' => 'Devon Park', 'initials' => 'DP', 'tone' => 'cyan', 'name' => 'AWS Certified Solutions Architect', 'issuer' => 'Amazon Web Services', 'issued' => 'May 2025', 'expires' => 'May 2028', 'status' => 'Current'],
+    ['employee' => 'Sofia Reyes', 'initials' => 'SR', 'tone' => 'mint', 'name' => 'SHRM Certified Professional', 'issuer' => 'SHRM', 'issued' => 'Aug 2024', 'expires' => 'Aug 2027', 'status' => 'Current'],
+    ['employee' => 'Maya Okafor', 'initials' => 'MO', 'tone' => 'violet', 'name' => 'Professional UX Certification', 'issuer' => 'Nielsen Norman Group', 'issued' => 'Jun 2024', 'expires' => 'Nov 2026', 'status' => 'Renewal due'],
+    ['employee' => 'Yuki Tanaka', 'initials' => 'YT', 'tone' => 'rose', 'name' => 'Kubernetes Application Developer', 'issuer' => 'Cloud Native Computing Foundation', 'issued' => 'Feb 2025', 'expires' => 'Feb 2027', 'status' => 'Current'],
+];
+
 $hrRecords = [
     ['employee' => 'Tom Becker', 'initials' => 'TB', 'tone' => 'cyan', 'title' => 'Campaign of the quarter', 'type' => 'Commendation', 'priority' => '', 'date' => 'May 30, 2026', 'description' => 'Spring relaunch campaign beat sign-up targets by 34%.', 'status' => 'Resolved', 'signature' => 'Signed by Tom Becker'],
     ['employee' => 'Priya Nair', 'initials' => 'PN', 'tone' => 'amber', 'title' => 'Expense policy violation', 'type' => 'Violation', 'priority' => 'Medium', 'date' => 'Jun 18, 2026', 'description' => 'Client dinner submitted without itemized receipt; exceeds per-head limit.', 'status' => 'Resolved', 'signature' => 'Signed by Priya Nair'],

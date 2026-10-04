@@ -43,12 +43,11 @@ $hiringRows = array_values(array_filter($hiringHistory, static function (array $
 }));
 
 $recordType = (string) ($_GET['type'] ?? 'All');
-$visibleRecords = array_values(array_filter($hrRecords, static function (array $record) use ($recordType): bool {
-    return $recordType === 'All' || $record['type'] === $recordType;
-}));
+$visibleRecords = array_values(array_filter($hrRecords, static fn (array $record): bool => $recordType === 'All' || $record['type'] === $recordType));
 $recordTypes = ['All', 'Memos', 'Warnings', 'Violations', 'Commendations'];
 $recordTypeMap = ['Memos' => 'Memo', 'Warnings' => 'Warning', 'Violations' => 'Violation', 'Commendations' => 'Commendation'];
 $employeeOptions = array_column($employees, 'name');
+
 $roleOptions = array_values(array_unique(array_column($jobTitles, 'title')));
 $departmentOptions = array_values(array_unique(array_column($jobTitles, 'department')));
 $dialogConfigs = [
@@ -112,8 +111,8 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= ems_h($page['title']) ?> - EMS</title>
-    <link rel="stylesheet" href="styles.css">
-        <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="styles.css?v=<?= (int) filemtime(__DIR__ . '/styles.css') ?>">
+    <link rel="stylesheet" href="dashboard.css?v=<?= (int) filemtime(__DIR__ . '/dashboard.css') ?>">
 </head>
 <body class="module-dashboard">
     <aside class="sidebar">
@@ -131,8 +130,14 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
             <?php endforeach; ?>
         </nav>
         <div class="sidebar-bottom">
-            <div class="user-profile"><strong>Signed in</strong><span>workspace member</span></div>
-            <a class="sign-out" href="overview.php"><?= ems_icon('logout') ?><span>Sign out</span></a>
+            <details class="account-menu">
+                <summary class="account-trigger">
+                    <span class="account-avatar" aria-hidden="true">JD</span>
+                    <span class="account-name">John Doe</span>
+                    <span class="account-caret" aria-hidden="true"></span>
+                </summary>
+                <a class="sign-out" href="#"><?= ems_icon('logout') ?><span>Sign out</span></a>
+            </details>
         </div>
     </aside>
 
@@ -229,6 +234,22 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                 </section>
                 <h2 class="list-heading">All evaluations</h2>
                 <section class="evaluation-list"><?php foreach ($evaluations as $evaluation): ?><article class="card evaluation-row"><span class="avatar <?= ems_h(array_column($employees, 'tone', 'name')[$evaluation['employee']] ?? 'violet') ?>"><?= ems_h($evaluation['initials']) ?></span><div class="evaluation-copy"><strong><?= ems_h($evaluation['employee']) ?></strong><span><?= ems_h($evaluation['period']) ?></span><span class="pill <?= $evaluation['status'] === 'Acknowledged' ? 'mint' : ($evaluation['status'] === 'Draft' ? 'slate' : 'blue') ?>"><?= ems_h($evaluation['status']) ?></span><small>by <?= ems_h($evaluation['reviewer']) ?> &middot; <?= ems_h($evaluation['note']) ?></small></div><div class="evaluation-score"><strong><?= (int) $evaluation['score'] ?></strong><small><?= $evaluation['score'] >= 90 ? 'Outstanding' : ($evaluation['score'] >= 75 ? 'Exceeds expectations' : 'Meets expectations') ?></small></div><?php if ($evaluation['status'] === 'Draft'): ?><button class="small-button" type="button">Finalize</button><?php elseif ($evaluation['status'] === 'Completed'): ?><button class="small-button" type="button">Acknowledge</button><?php endif; ?><button class="icon-button" type="button" aria-label="More actions">&times;</button></article><?php endforeach; ?></section>
+                <section class="certification-section" aria-labelledby="certification-heading">
+                    <div class="section-title"><h2 id="certification-heading">Certifications</h2><p>Professional credentials and renewal dates</p></div>
+                    <div class="certification-list">
+                        <?php foreach ($certifications as $certification): ?>
+                            <article class="card certification-card">
+                                <span class="avatar <?= ems_h($certification['tone']) ?>"><?= ems_h($certification['initials']) ?></span>
+                                <div class="certification-copy">
+                                    <strong><?= ems_h($certification['name']) ?></strong>
+                                    <span><?= ems_h($certification['employee']) ?> &middot; <?= ems_h($certification['issuer']) ?></span>
+                                    <small>Issued <?= ems_h($certification['issued']) ?> &middot; Expires <?= ems_h($certification['expires']) ?></small>
+                                </div>
+                                <span class="pill <?= $certification['status'] === 'Current' ? 'mint' : 'amber' ?>"><?= ems_h($certification['status']) ?></span>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
 
             <?php elseif ($pageKey === 'hr-records'): ?>
                 <section class="metric-grid three-columns">
@@ -245,7 +266,7 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                     <article class="card metric-card"><span>Approved this year</span><strong>2</strong><small>across all types</small></article>
                     <article class="card metric-card"><span>Employees tracked</span><strong><?= count($leaveBalances) ?></strong><small>2026 balances</small></article>
                 </section>
-                <section class="card balance-section"><div class="section-title"><h2>Balances &middot; 2026</h2><p>Vacation / sick / personal days remaining</p></div><div class="balance-grid"><?php foreach ($leaveBalances as $balance): ?><article class="balance-card"><h3><span class="avatar <?= ems_h($balance['tone']) ?>"><?= ems_h($balance['initials']) ?></span><?= ems_h($balance['name']) ?></h3><?php foreach (['Vacation' => ['vacation', 20], 'Sick' => ['sick', 10], 'Personal' => ['personal', 5]] as $label => [$key, $total]): $remaining = (int) $balance[$key]; ?><div class="balance-row"><div><span><?= ems_h($label) ?></span><span><?= $remaining ?> of <?= $total ?> left</span></div><div class="balance-track"><i style="width: <?= (int) round($remaining / $total * 100) ?>%"></i></div></div><?php endforeach; ?></article><?php endforeach; ?></div></section>
+                <section class="card balance-section"><div class="section-title"><h2>Balances &middot; 2026</h2><p>Vacation / sick / personal days remaining</p></div><div class="balance-grid"><?php foreach ($leaveBalances as $balance): ?><article class="balance-card"><h3><span class="avatar <?= ems_h($balance['tone']) ?>"><?= ems_h($balance['initials']) ?></span><?= ems_h($balance['name']) ?></h3><?php foreach (['Vacation' => ['vacation', 20], 'Sick' => ['sick', 10], 'Personal' => ['personal', 5]] as $label => [$key, $total]): $remaining = (int) $balance[$key]; ?><div class="balance-row"><div class="balance-type"><span class="balance-indicator <?= strtolower($label) ?>" aria-hidden="true"></span><span><?= ems_h($label) ?></span></div><div class="balance-value"><strong><?= $remaining ?></strong><span>days left</span><small>of <?= $total ?> allocated</small></div></div><?php endforeach; ?></article><?php endforeach; ?></div></section>
                 <h2 class="list-heading">Approval queue</h2>
                 <section class="leave-list"><?php foreach ($leaveRequests as $request): ?><article class="card leave-request"><span class="avatar <?= ems_h($request['tone']) ?>"><?= ems_h($request['initials']) ?></span><div class="leave-copy"><strong><?= ems_h($request['employee']) ?></strong><span class="pill <?= $request['type'] === 'Vacation' ? 'cyan' : 'violet' ?>"><?= ems_h($request['type']) ?></span><span class="leave-days"><?= (int) $request['days'] ?> <?= $request['days'] === 1 ? 'day' : 'days' ?></span><small><?= ems_h($request['from']) ?> &rarr; <?= ems_h($request['to']) ?><?= $request['note'] ? ' · ' . ems_h($request['note']) : '' ?></small></div><div class="leave-actions"><button type="button" class="approve-button">&#10003; Approve</button><button type="button" class="small-button">&times; Reject</button></div></article><?php endforeach; ?></section>
                 <h2 class="list-heading">Decision history</h2>
@@ -286,7 +307,7 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                         <label class="dialog-field<?= !empty($field['wide']) ? ' wide' : '' ?>">
                             <span><?= ems_h($field['label']) ?></span>
                             <?php if ($field['type'] === 'select'): ?>
-                                <select name="<?= ems_h($field['name']) ?>"<?= !empty($field['required']) ? ' required' : '' ?>><option value=""><?= ems_h($field['placeholder']) ?></option><?php foreach ($field['options'] as $option): ?><option value="<?= ems_h($option) ?>"><?= ems_h($option) ?></option><?php endforeach; ?></select>
+                                <select name="<?= ems_h($field['name']) ?>"<?= !empty($field['required']) ? ' required' : '' ?>><option value=""><?= ems_h($field['placeholder']) ?></option><?php foreach ($field['options'] as $optionValue => $optionLabel): ?><option value="<?= ems_h(is_int($optionValue) ? $optionLabel : $optionValue) ?>"><?= ems_h($optionLabel) ?></option><?php endforeach; ?></select>
                             <?php elseif ($field['type'] === 'textarea'): ?>
                                 <textarea name="<?= ems_h($field['name']) ?>" placeholder="<?= ems_h($field['placeholder']) ?>" rows="3"<?= !empty($field['required']) ? ' required' : '' ?>></textarea>
                             <?php else: ?>

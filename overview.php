@@ -41,6 +41,7 @@ $navItems = [
     ['title' => 'HR Records', 'icon' => 'gavel', 'href' => 'hr-records.php'],
     ['title' => 'Leave', 'icon' => 'calendar', 'href' => 'leave.php', 'badge' => 2],
     ['title' => 'Settings', 'icon' => 'settings', 'href' => 'settings.php'],
+    ['title' => 'Reports', 'icon' => 'chart', 'href' => 'reports.php'],
 ];
 
 function dashboard_icon(string $name): string
@@ -55,6 +56,7 @@ function dashboard_icon(string $name): string
         'clipboard' => '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1ZM8 11h8M8 15h8"/>',
         'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M12 15v3m-1.5-1.5h3"/>',
         'settings' => '<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.7-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.7a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.7 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z"/>',
+        'chart' => '<path d="M4 19V5m0 14h17"/><path d="m7 15 4-4 3 2 6-7"/>',
         'wallet' => '<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 8h18M16 14h2"/><path d="M3 5V4a2 2 0 0 1 2-2h13"/>',
         'percent' => '<path d="m19 5-14 14"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
         'badge-check' => '<path d="m12 3 2.2 1.2 2.5-.1 1.2 2.2 2.1 1.4-.5 2.5.5 2.5-2.1 1.4-1.2 2.2-2.5-.1L12 18l-2.2-1.2-2.5.1-1.2-2.2L4 13.3l.5-2.5L4 8.3l2.1-1.4 1.2-2.2 2.5.1L12 3Z"/><path d="m9 10.5 2 2 4-4"/>',
@@ -71,6 +73,14 @@ function dashboard_icon(string $name): string
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Overview - EMS</title>
+    <script>
+        try {
+            const savedTheme = localStorage.getItem('ems-theme');
+            if (savedTheme === 'dark-sidebar') document.documentElement.dataset.theme = savedTheme;
+        } catch (error) {
+            console.warn('Unable to restore the saved EMS theme preference.', error);
+        }
+    </script>
     <link rel="stylesheet" href="dashboard.css?v=<?= (int) filemtime(__DIR__ . '/dashboard.css') ?>">
 </head>
 <body class="module-dashboard">
@@ -182,5 +192,6 @@ function dashboard_icon(string $name): string
             </section>
         </div>
     </main>
+    <script src="dashboard.js?v=<?= (int) filemtime(__DIR__ . '/dashboard.js') ?>" defer></script>
 </body>
 </html>

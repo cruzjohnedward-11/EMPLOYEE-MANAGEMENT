@@ -12,8 +12,13 @@ $employees = [
 ];
 
 $candidates = [
-    ['name' => 'Marcus Webb', 'role' => 'Software Engineer', 'stage' => 'Screening', 'days' => 41],
-    ['name' => 'Elena Marquez', 'role' => 'Software Engineer', 'stage' => 'Interviewing', 'days' => 53],
+    ['name' => 'Marcus Webb', 'email' => 'marcus.webb@example.com', 'role' => 'Software Engineer', 'department' => 'Engineering', 'stage' => 'Screening', 'applied' => 'Aug 27, 2026', 'days' => 41],
+    ['name' => 'Elena Marquez', 'email' => 'elena.marquez@example.com', 'role' => 'Product Designer', 'department' => 'Design', 'stage' => 'Interviewing', 'applied' => 'Aug 15, 2026', 'days' => 53],
+];
+
+$candidateArchive = [
+    ['name' => 'Nia Patel', 'email' => 'nia.patel@example.com', 'role' => 'Frontend Developer', 'department' => 'Engineering', 'applied' => 'Jul 18, 2026', 'outcome' => 'Rejected', 'closed' => 'Aug 9, 2026'],
+    ['name' => 'Mateo Alvarez', 'email' => 'mateo.alvarez@example.com', 'role' => 'Sales Representative', 'department' => 'Sales', 'applied' => 'Jun 30, 2026', 'outcome' => 'Withdrew', 'closed' => 'Jul 12, 2026'],
 ];
 
 $hiringHistory = [
@@ -117,6 +122,12 @@ $jobTitles = [
     ['department' => 'Sales', 'title' => 'Sales Representative', 'level' => 'Mid', 'description' => 'Drives new business and account growth', 'salary' => 1560000, 'count' => 1],
 ];
 
+$payrollAuditLogs = [
+    ['date' => 'Sep 18, 2026', 'time' => '10:42 AM', 'action' => 'Annual salary adjustment', 'employee' => 'Devon Park', 'before' => 4560000, 'after' => 4800000, 'actor' => 'Sofia Reyes', 'handoff' => 'Awaiting payroll review'],
+    ['date' => 'Aug 4, 2026', 'time' => '2:15 PM', 'action' => 'Promotion · Senior Software Engineer', 'employee' => 'Yuki Tanaka', 'before' => 3240000, 'after' => 3600000, 'actor' => 'Sofia Reyes', 'handoff' => 'Sample handoff'],
+    ['date' => 'Jul 1, 2026', 'time' => '9:08 AM', 'action' => 'Base salary correction', 'employee' => 'Maya Okafor', 'before' => 2280000, 'after' => 2400000, 'actor' => 'John Doe', 'handoff' => 'Awaiting payroll review'],
+];
+
 function ems_h(string|int|float|null $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
@@ -138,6 +149,7 @@ function ems_icon(string $name): string
         'gavel' => '<path d="m14 13 7-7-3-3-7 7M5 21l8-8M7 8l3-3 9 9-3 3z"/>',
         'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',
         'settings' => '<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.7-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.7a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.7 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z"/>',
+        'chart' => '<path d="M4 19V5m0 14h17"/><path d="m7 15 4-4 3 2 6-7"/>',
         'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
         'briefcase' => '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"/>',
         'logout' => '<path d="m10 17 5-5-5-5m5 5H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>',

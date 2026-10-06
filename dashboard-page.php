@@ -9,6 +9,7 @@ $pages = [
     'hr-records' => ['title' => 'HR Records', 'icon' => 'gavel', 'subtitle' => 'Memos, warning notices, policy violations and formal commendations - with resolution tracking and signed acknowledgment.'],
     'leave' => ['title' => 'Leave Management', 'icon' => 'calendar', 'subtitle' => 'Time-off requests, approval workflow and balance tracking - approvals deduct days automatically.'],
     'settings' => ['title' => 'Settings', 'icon' => 'settings', 'subtitle' => 'Job titles, departments and base salary bands used across hiring, profiles and payroll views.'],
+    'reports' => ['title' => 'Reports', 'icon' => 'chart', 'subtitle' => 'Workforce, compensation, turnover and recruiting summaries for operational planning.'],
 ];
 
 if (!isset($pageKey, $pages[$pageKey])) {
@@ -25,6 +26,7 @@ $navItems = [
     ['key' => 'hr-records', 'title' => 'HR Records', 'icon' => 'gavel', 'href' => 'hr-records.php'],
     ['key' => 'leave', 'title' => 'Leave', 'icon' => 'calendar', 'href' => 'leave.php', 'badge' => 2],
     ['key' => 'settings', 'title' => 'Settings', 'icon' => 'settings', 'href' => 'settings.php'],
+    ['key' => 'reports', 'title' => 'Reports', 'icon' => 'chart', 'href' => 'reports.php'],
 ];
 
 $employeeSearch = trim((string) ($_GET['search'] ?? ''));
@@ -41,6 +43,13 @@ $hiringSearch = trim((string) ($_GET['search'] ?? ''));
 $hiringRows = array_values(array_filter($hiringHistory, static function (array $candidate) use ($hiringSearch): bool {
     return $hiringSearch === '' || stripos($candidate['name'] . ' ' . $candidate['email'] . ' ' . $candidate['role'], $hiringSearch) !== false;
 }));
+$applicantDepartments = array_values(array_unique(array_column(array_merge($candidates, $candidateArchive), 'department')));
+$stageActions = [
+    'Applied' => ['Move to Screening', 'Reject'],
+    'Screening' => ['Move to Interview', 'Reject'],
+    'Interviewing' => ['Extend Offer', 'Reject'],
+    'Offer' => ['Hire', 'Reject'],
+];
 
 $recordType = (string) ($_GET['type'] ?? 'All');
 $visibleRecords = array_values(array_filter($hrRecords, static fn (array $record): bool => $recordType === 'All' || $record['type'] === $recordType));
@@ -50,6 +59,18 @@ $employeeOptions = array_column($employees, 'name');
 
 $roleOptions = array_values(array_unique(array_column($jobTitles, 'title')));
 $departmentOptions = array_values(array_unique(array_column($jobTitles, 'department')));
+$headcountByDepartment = [];
+$payrollByDepartment = [];
+foreach ($employees as $employee) {
+    $department = $employee['department'];
+    $headcountByDepartment[$department] = ($headcountByDepartment[$department] ?? 0) + 1;
+    $payrollByDepartment[$department] = ($payrollByDepartment[$department] ?? 0) + $employee['salary'];
+}
+ksort($headcountByDepartment);
+ksort($payrollByDepartment);
+$annualPayroll = array_sum(array_column($employees, 'salary'));
+$averageTimeToHire = count($hiringHistory) ? (int) round(array_sum(array_column($hiringHistory, 'days')) / count($hiringHistory)) : 0;
+$fastestTimeToHire = count($hiringHistory) ? min(array_column($hiringHistory, 'days')) : 0;
 $dialogConfigs = [
     'employees' => ['title' => 'Add employee', 'description' => 'New hires start in probation by default.', 'submit' => 'Add employee', 'fields' => [
         ['label' => 'Full name', 'name' => 'full_name', 'type' => 'text', 'placeholder' => 'Enter full name', 'required' => true],
@@ -111,6 +132,14 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= ems_h($page['title']) ?> - EMS</title>
+    <script>
+        try {
+            const savedTheme = localStorage.getItem('ems-theme');
+            if (savedTheme === 'dark-sidebar') document.documentElement.dataset.theme = savedTheme;
+        } catch (error) {
+            console.warn('Unable to restore the saved EMS theme preference.', error);
+        }
+    </script>
     <link rel="stylesheet" href="styles.css?v=<?= (int) filemtime(__DIR__ . '/styles.css') ?>">
     <link rel="stylesheet" href="dashboard.css?v=<?= (int) filemtime(__DIR__ . '/dashboard.css') ?>">
 </head>
@@ -192,10 +221,40 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                 <section class="pipeline-board" aria-label="Hiring pipeline">
                     <?php foreach (['Applied', 'Screening', 'Interviewing', 'Offer'] as $stage): $stageCandidates = array_values(array_filter($candidates, static fn (array $candidate): bool => $candidate['stage'] === $stage)); ?>
                         <article class="stage-card"><div class="stage-heading"><span><?= ems_icon('person-add') ?> <?= ems_h($stage) ?></span><span><?= count($stageCandidates) ?></span></div>
-                            <?php if (!$stageCandidates): ?><div class="stage-empty">Empty</div><?php endif; ?>
-                            <?php foreach ($stageCandidates as $candidate): ?><div class="candidate-card"><strong><?= ems_h($candidate['name']) ?></strong><small><?= ems_h($candidate['role']) ?></small><span class="candidate-age"><?= (int) $candidate['days'] ?>d in pipeline</span><div class="candidate-actions"><button type="button">&larr; Back</button><button type="button">Advance &rarr;</button></div></div><?php endforeach; ?>
+                            <?php if (!$stageCandidates): ?><div class="stage-empty">No candidates at this stage</div><?php endif; ?>
+                            <?php foreach ($stageCandidates as $candidate): ?><div class="candidate-card"><strong><?= ems_h($candidate['name']) ?></strong><small><?= ems_h($candidate['role']) ?></small><span class="candidate-age"><?= (int) $candidate['days'] ?>d in pipeline</span><details class="applicant-actions"><summary>Actions</summary><div class="applicant-action-menu"><?php foreach ($stageActions[$stage] as $action): ?><button type="button" data-preview-action="<?= ems_h($action) ?>"><?= ems_h($action) ?></button><?php endforeach; ?></div></details></div><?php endforeach; ?>
                         </article>
                     <?php endforeach; ?>
+                </section>
+                <section class="card applicant-section" data-applicant-browser>
+                    <div class="applicant-heading">
+                        <div><h2>Applicants</h2><p>Search and review candidates across the active pipeline and archive.</p></div>
+                        <span class="data-notice">Sample data · changes are not saved</span>
+                    </div>
+                    <div class="applicant-toolbar">
+                        <label class="search-control"><?= ems_icon('search') ?><input type="search" data-applicant-search placeholder="Search name, email, or role..." aria-label="Search applicants"></label>
+                        <label class="select-control"><span class="sr-only">Department</span><select data-applicant-department><option value="">All departments</option><?php foreach ($applicantDepartments as $department): ?><option value="<?= ems_h($department) ?>"><?= ems_h($department) ?></option><?php endforeach; ?></select></label>
+                        <label class="select-control page-size-control"><span>Rows</span><select data-page-size aria-label="Applicants per page"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label>
+                    </div>
+                    <div class="applicant-tabs" role="tablist" aria-label="Applicant status">
+                        <button type="button" class="applicant-tab active" id="applicants-active-tab" role="tab" aria-selected="true" aria-controls="applicants-active-panel" data-applicant-tab="active">Active <span><?= count($candidates) ?></span></button>
+                        <button type="button" class="applicant-tab" id="applicants-archive-tab" role="tab" aria-selected="false" aria-controls="applicants-archive-panel" data-applicant-tab="archive" tabindex="-1">Archive <span><?= count($candidateArchive) ?></span></button>
+                    </div>
+                    <div class="applicant-panel" id="applicants-active-panel" role="tabpanel" aria-labelledby="applicants-active-tab" data-applicant-panel="active">
+                        <div class="table-card applicant-table-wrap"><table class="data-table applicant-table"><thead><tr><th>Candidate</th><th>Role</th><th>Department</th><th>Stage</th><th>Applied</th><th>In pipeline</th><th>Actions</th></tr></thead><tbody>
+                            <?php foreach ($candidates as $candidate): ?><tr data-applicant-row data-department="<?= ems_h($candidate['department']) ?>" data-search="<?= ems_h($candidate['name'] . ' ' . $candidate['email'] . ' ' . $candidate['role'] . ' ' . $candidate['department']) ?>"><td><strong><?= ems_h($candidate['name']) ?></strong><small><?= ems_h($candidate['email']) ?></small></td><td><?= ems_h($candidate['role']) ?></td><td><?= ems_h($candidate['department']) ?></td><td><span class="pill blue"><?= ems_h($candidate['stage']) ?></span></td><td><?= ems_h($candidate['applied']) ?></td><td><?= (int) $candidate['days'] ?> days</td><td><select class="applicant-action-select" data-preview-action-select aria-label="Actions for <?= ems_h($candidate['name']) ?>"><option value="">Actions</option><?php foreach ($stageActions[$candidate['stage']] as $action): ?><option value="<?= ems_h($action) ?>"><?= ems_h($action) ?></option><?php endforeach; ?></select></td></tr><?php endforeach; ?>
+                            <tr class="applicant-empty-row" data-applicant-empty hidden><td colspan="7"><strong>No applicants found</strong><span>Try changing your search or department filter.</span></td></tr>
+                        </tbody></table></div>
+                        <div class="applicant-pagination"><span data-page-summary aria-live="polite"></span><div><button type="button" data-page-prev disabled>Previous</button><span data-page-indicator></span><button type="button" data-page-next disabled>Next</button></div></div>
+                    </div>
+                    <div class="applicant-panel" id="applicants-archive-panel" role="tabpanel" aria-labelledby="applicants-archive-tab" data-applicant-panel="archive" hidden>
+                        <div class="table-card applicant-table-wrap"><table class="data-table applicant-table"><thead><tr><th>Candidate</th><th>Role</th><th>Department</th><th>Applied</th><th>Outcome</th><th>Closed</th></tr></thead><tbody>
+                            <?php foreach ($candidateArchive as $candidate): ?><tr data-applicant-row data-department="<?= ems_h($candidate['department']) ?>" data-search="<?= ems_h($candidate['name'] . ' ' . $candidate['email'] . ' ' . $candidate['role'] . ' ' . $candidate['department'] . ' ' . $candidate['outcome']) ?>"><td><strong><?= ems_h($candidate['name']) ?></strong><small><?= ems_h($candidate['email']) ?></small></td><td><?= ems_h($candidate['role']) ?></td><td><?= ems_h($candidate['department']) ?></td><td><?= ems_h($candidate['applied']) ?></td><td><span class="pill <?= $candidate['outcome'] === 'Rejected' ? 'rose' : 'slate' ?>"><?= ems_h($candidate['outcome']) ?></span></td><td><?= ems_h($candidate['closed']) ?></td></tr><?php endforeach; ?>
+                            <tr class="applicant-empty-row" data-applicant-empty hidden><td colspan="6"><strong>No archived applicants found</strong><span>Try changing your search or department filter.</span></td></tr>
+                        </tbody></table></div>
+                        <div class="applicant-pagination"><span data-page-summary aria-live="polite"></span><div><button type="button" data-page-prev disabled>Previous</button><span data-page-indicator></span><button type="button" data-page-next disabled>Next</button></div></div>
+                    </div>
+                    <p class="applicant-feedback" data-applicant-feedback role="status" aria-live="polite"></p>
                 </section>
                 <section class="card tracker-card"><div class="tracker-heading"><div><h2>Basic hiring tracker</h2><p>Days between application date and hire date</p></div><form method="get" action="hiring.php" class="tracker-search"><label class="search-control"><?= ems_icon('search') ?><input type="search" name="search" value="<?= ems_h($hiringSearch) ?>" placeholder="Search..." aria-label="Search hiring tracker"></label></form></div>
                     <div class="table-card"><table class="data-table"><thead><tr><th>Candidate</th><th>Role</th><th>Applied</th><th>Hired</th><th>Time to hire</th></tr></thead><tbody><?php foreach ($hiringRows as $candidate): ?><tr><td><strong><?= ems_h($candidate['name']) ?></strong><small><?= ems_h($candidate['email']) ?></small></td><td><?= ems_h($candidate['role']) ?></td><td><?= ems_h($candidate['applied']) ?></td><td><?= ems_h($candidate['hired']) ?></td><td class="hire-days"><?= (int) $candidate['days'] ?> days</td></tr><?php endforeach; ?><?php if (!$hiringRows): ?><tr><td colspan="5" class="empty-state">No completed hires match your search.</td></tr><?php endif; ?></tbody></table></div>
@@ -266,15 +325,43 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                     <article class="card metric-card"><span>Approved this year</span><strong>2</strong><small>across all types</small></article>
                     <article class="card metric-card"><span>Employees tracked</span><strong><?= count($leaveBalances) ?></strong><small>2026 balances</small></article>
                 </section>
-                <section class="card balance-section"><div class="section-title"><h2>Balances &middot; 2026</h2><p>Vacation / sick / personal days remaining</p></div><div class="balance-grid"><?php foreach ($leaveBalances as $balance): ?><article class="balance-card"><h3><span class="avatar <?= ems_h($balance['tone']) ?>"><?= ems_h($balance['initials']) ?></span><?= ems_h($balance['name']) ?></h3><?php foreach (['Vacation' => ['vacation', 20], 'Sick' => ['sick', 10], 'Personal' => ['personal', 5]] as $label => [$key, $total]): $remaining = (int) $balance[$key]; ?><div class="balance-row"><div class="balance-type"><span class="balance-indicator <?= strtolower($label) ?>" aria-hidden="true"></span><span><?= ems_h($label) ?></span></div><div class="balance-value"><strong><?= $remaining ?></strong><span>days left</span><small>of <?= $total ?> allocated</small></div></div><?php endforeach; ?></article><?php endforeach; ?></div></section>
+                <section class="card leave-table-section"><div class="section-title"><h2>Balances &middot; 2026</h2><p>Remaining vacation, sick and personal days</p></div><div class="table-card compact-table-wrap"><table class="data-table compact-data-table leave-balance-table"><thead><tr><th>Employee</th><th>Vacation</th><th>Sick</th><th>Personal</th></tr></thead><tbody><?php foreach ($leaveBalances as $balance): ?><tr><td><span class="employee-cell"><span class="avatar <?= ems_h($balance['tone']) ?>"><?= ems_h($balance['initials']) ?></span><strong><?= ems_h($balance['name']) ?></strong></span></td><?php foreach (['vacation', 'sick', 'personal'] as $key): ?><td><strong><?= (int) $balance[$key] ?></strong><small>days remaining</small></td><?php endforeach; ?></tr><?php endforeach; ?></tbody></table></div></section>
                 <h2 class="list-heading">Approval queue</h2>
-                <section class="leave-list"><?php foreach ($leaveRequests as $request): ?><article class="card leave-request"><span class="avatar <?= ems_h($request['tone']) ?>"><?= ems_h($request['initials']) ?></span><div class="leave-copy"><strong><?= ems_h($request['employee']) ?></strong><span class="pill <?= $request['type'] === 'Vacation' ? 'cyan' : 'violet' ?>"><?= ems_h($request['type']) ?></span><span class="leave-days"><?= (int) $request['days'] ?> <?= $request['days'] === 1 ? 'day' : 'days' ?></span><small><?= ems_h($request['from']) ?> &rarr; <?= ems_h($request['to']) ?><?= $request['note'] ? ' · ' . ems_h($request['note']) : '' ?></small></div><div class="leave-actions"><button type="button" class="approve-button">&#10003; Approve</button><button type="button" class="small-button">&times; Reject</button></div></article><?php endforeach; ?></section>
+                <section class="card leave-table-section"><div class="table-card compact-table-wrap"><table class="data-table compact-data-table"><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Duration</th><th>Note</th><th>Actions</th></tr></thead><tbody><?php foreach ($leaveRequests as $request): ?><tr><td><span class="employee-cell"><span class="avatar <?= ems_h($request['tone']) ?>"><?= ems_h($request['initials']) ?></span><strong><?= ems_h($request['employee']) ?></strong></span></td><td><span class="pill <?= $request['type'] === 'Vacation' ? 'cyan' : 'violet' ?>"><?= ems_h($request['type']) ?></span></td><td><?= ems_h($request['from']) ?> &ndash; <?= ems_h($request['to']) ?></td><td><?= (int) $request['days'] ?> <?= $request['days'] === 1 ? 'day' : 'days' ?></td><td><?= $request['note'] ? ems_h($request['note']) : '<span class="muted">—</span>' ?></td><td><div class="compact-leave-actions"><button type="button" class="approve-button">&#10003; Approve</button><button type="button" class="small-button">Reject</button></div></td></tr><?php endforeach; ?><?php if (!$leaveRequests): ?><tr><td colspan="6" class="empty-state">No leave requests are awaiting review.</td></tr><?php endif; ?></tbody></table></div></section>
                 <h2 class="list-heading">Decision history</h2>
-                <section class="leave-list history-list"><?php foreach ($leaveHistory as $request): ?><article class="card leave-request history-request"><span class="avatar <?= ems_h($request['tone']) ?>"><?= ems_h($request['initials']) ?></span><div class="leave-copy"><strong><?= ems_h($request['employee']) ?></strong><span class="pill <?= $request['status'] === 'Approved' ? 'mint' : 'rose' ?>"><?= ems_h($request['status']) ?></span><small><?= (int) $request['days'] ?>d &middot; <?= ems_h($request['dates']) ?><?= $request['note'] ? ' · "' . ems_h($request['note']) . '"' : '' ?></small></div><button class="icon-button" type="button" aria-label="Dismiss history item">&times;</button></article><?php endforeach; ?></section>
+                <section class="card leave-table-section"><div class="table-card compact-table-wrap"><table class="data-table compact-data-table"><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Duration</th><th>Decision</th><th>Note</th></tr></thead><tbody><?php foreach ($leaveHistory as $request): ?><tr><td><span class="employee-cell"><span class="avatar <?= ems_h($request['tone']) ?>"><?= ems_h($request['initials']) ?></span><strong><?= ems_h($request['employee']) ?></strong></span></td><td><?= ems_h($request['type']) ?></td><td><?= ems_h($request['dates']) ?></td><td><?= (int) $request['days'] ?> days</td><td><span class="pill <?= $request['status'] === 'Approved' ? 'mint' : 'rose' ?>"><?= ems_h($request['status']) ?></span></td><td><?= $request['note'] ? ems_h($request['note']) : '<span class="muted">—</span>' ?></td></tr><?php endforeach; ?><?php if (!$leaveHistory): ?><tr><td colspan="6" class="empty-state">No leave decisions have been recorded.</td></tr><?php endif; ?></tbody></table></div></section>
 
             <?php elseif ($pageKey === 'settings'): ?>
-                <?php $rolesByDepartment = []; foreach ($jobTitles as $role) { $rolesByDepartment[$role['department']][] = $role; } ?>
-                <section class="settings-departments"><?php foreach ($rolesByDepartment as $department => $roles): ?><section class="department-section"><h2><span class="department-icon"><?= ems_icon('briefcase') ?></span><?= ems_h($department) ?><small><?= count($roles) ?> <?= count($roles) === 1 ? 'role' : 'roles' ?></small></h2><div class="role-grid"><?php foreach ($roles as $role): ?><article class="card role-card"><strong><?= ems_h($role['title']) ?></strong><span class="level"><?= ems_h($role['level']) ?></span><p><?= ems_h($role['description']) ?></p><div><b><?= ems_money($role['salary']) ?></b><small><?= (int) $role['count'] ?> employee<?= $role['count'] === 1 ? '' : 's' ?></small></div></article><?php endforeach; ?></div></section><?php endforeach; ?></section>
+                <section class="card appearance-card" aria-labelledby="appearance-title">
+                    <div class="appearance-copy">
+                        <h2 id="appearance-title">Appearance</h2>
+                        <p>Choose a workspace theme. Your preference stays with you across EMS modules.</p>
+                    </div>
+                    <label class="appearance-control" for="theme-select">
+                        <span>Workspace theme</span>
+                        <select id="theme-select" data-theme-select>
+                            <option value="light">Default Light</option>
+                            <option value="dark-sidebar">Modern Dark Sidebar</option>
+                        </select>
+                    </label>
+                </section>
+                <section class="card settings-table-section"><div class="settings-table-heading"><div><h2>Job titles &amp; salary bands</h2><p>Configured roles by department and career level</p></div><span><?= count($jobTitles) ?> roles</span></div><div class="table-card compact-table-wrap"><table class="data-table settings-table"><thead><tr><th>Role</th><th>Department</th><th>Level</th><th>Salary Band</th></tr></thead><tbody><?php foreach ($jobTitles as $role): ?><tr><td><strong><?= ems_h($role['title']) ?></strong><small><?= ems_h($role['description']) ?></small></td><td><?= ems_h($role['department']) ?></td><td><span class="pill slate"><?= ems_h($role['level']) ?></span></td><td><?= ems_money($role['salary']) ?><small>annual base salary</small></td></tr><?php endforeach; ?></tbody></table></div></section>
+
+            <?php elseif ($pageKey === 'reports'): ?>
+                <section class="metric-grid report-metrics">
+                    <article class="card metric-card"><span>Headcount</span><strong><?= count($employees) ?></strong><small>active workforce in this sample</small></article>
+                    <article class="card metric-card"><span>Annual base payroll</span><strong><?= ems_money($annualPayroll) ?></strong><small>across <?= count($employees) ?> employees</small></article>
+                    <article class="card metric-card"><span>Turnover rate</span><strong>11.1%</strong><small>illustrative YTD sample · 1 separation</small></article>
+                    <article class="card metric-card"><span>Avg. time to hire</span><strong><?= $averageTimeToHire ?> days</strong><small><?= count($hiringHistory) ?> completed hires in sample</small></article>
+                </section>
+                <p class="data-notice report-disclaimer">Illustrative dashboard data. Connect the HRIS and payroll source before using these figures for decisions.</p>
+                <section class="report-grid">
+                    <article class="card report-card"><div class="report-card-heading"><div><h2>Headcount by department</h2><p>Current employee distribution</p></div><button type="button" class="small-button" data-export-table="headcount-report.csv">Export CSV</button></div><div class="table-card report-table-wrap"><table class="data-table report-table" data-report-table><thead><tr><th>Department</th><th>Employees</th><th>Share</th></tr></thead><tbody><?php foreach ($headcountByDepartment as $department => $count): ?><tr><td><?= ems_h($department) ?></td><td><?= $count ?></td><td><?= count($employees) ? number_format($count / count($employees) * 100, 1) : '0.0' ?>%</td></tr><?php endforeach; ?><tr><th>Total</th><th><?= count($employees) ?></th><th>100%</th></tr></tbody></table></div></article>
+                    <article class="card report-card"><div class="report-card-heading"><div><h2>Payroll distribution</h2><p>Annual base payroll by department</p></div><button type="button" class="small-button" data-export-table="payroll-distribution.csv">Export CSV</button></div><div class="table-card report-table-wrap"><table class="data-table report-table" data-report-table><thead><tr><th>Department</th><th>Annual payroll</th><th>Share</th></tr></thead><tbody><?php foreach ($payrollByDepartment as $department => $amount): ?><tr><td><?= ems_h($department) ?></td><td><?= ems_money($amount) ?></td><td><?= $annualPayroll ? number_format($amount / $annualPayroll * 100, 1) : '0.0' ?>%</td></tr><?php endforeach; ?><tr><th>Total</th><th><?= ems_money($annualPayroll) ?></th><th>100%</th></tr></tbody></table></div></article>
+                    <article class="card report-card"><div class="report-card-heading"><div><h2>Turnover snapshot</h2><p>Year-to-date separation rate</p></div><button type="button" class="small-button" data-export-table="turnover-snapshot.csv">Export CSV</button></div><div class="table-card report-table-wrap"><table class="data-table report-table" data-report-table><thead><tr><th>Period</th><th>Avg. headcount</th><th>Separations</th><th>Turnover</th></tr></thead><tbody><tr><td>2026 YTD</td><td><?= count($employees) ?></td><td>1 <span class="data-notice-inline">Sample</span></td><td>11.1%</td></tr></tbody></table></div></article>
+                    <article class="card report-card"><div class="report-card-heading"><div><h2>Hiring velocity</h2><p>Days from application to hire</p></div><button type="button" class="small-button" data-export-table="hiring-velocity.csv">Export CSV</button></div><div class="table-card report-table-wrap"><table class="data-table report-table" data-report-table><thead><tr><th>Completed hires</th><th>Average days</th><th>Fastest</th></tr></thead><tbody><tr><td><?= count($hiringHistory) ?></td><td><?= $averageTimeToHire ?></td><td><?= $fastestTimeToHire ?></td></tr></tbody></table></div></article>
+                </section>
+                <section class="card audit-section"><div class="report-card-heading"><div><h2>Payroll audit trail</h2><p>Compensation-impacting HR activity for payroll review</p></div><button type="button" class="small-button" data-export-table="payroll-audit-preview.csv">Export CSV</button></div><div class="audit-handoff"><strong>Payroll collaborator group</strong><span>Intended handoff for compensation changes · live routing requires backend integration</span></div><div class="table-card report-table-wrap"><table class="data-table audit-table" data-report-table><thead><tr><th>Date &amp; time</th><th>HR action</th><th>Employee</th><th>Annual salary change</th><th>Changed by</th><th>Payroll handoff</th></tr></thead><tbody><?php foreach ($payrollAuditLogs as $log): ?><tr><td><?= ems_h($log['date']) ?><small><?= ems_h($log['time']) ?></small></td><td><?= ems_h($log['action']) ?></td><td><strong><?= ems_h($log['employee']) ?></strong></td><td><?= ems_money($log['before']) ?> &rarr; <?= ems_money($log['after']) ?></td><td><?= ems_h($log['actor']) ?></td><td><span class="pill amber"><?= ems_h($log['handoff']) ?></span></td></tr><?php endforeach; ?></tbody></table></div><p class="data-notice audit-disclaimer">Preview only — no audit_logs table is being written and no payroll notification is sent by this UI.</p></section>
             <?php endif; ?>
         </div>
     </main>
@@ -297,7 +384,6 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                 <footer class="dialog-actions"><button class="dialog-cancel" type="button" data-dialog-close>Close</button></footer>
             </div>
         </dialog>
-        <script src="dashboard.js" defer></script>
     <?php elseif ($dialogConfig): ?>
         <dialog class="dashboard-dialog" id="dashboard-form-dialog" aria-labelledby="dialog-title">
             <form class="dialog-form" method="dialog" data-preview-form>
@@ -320,7 +406,7 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                 <footer class="dialog-actions"><button class="dialog-cancel" type="button" data-dialog-close>Cancel</button><button class="btn-primary" type="submit"><?= ems_h($dialogConfig['submit']) ?></button></footer>
             </form>
         </dialog>
-        <script src="dashboard.js" defer></script>
     <?php endif; ?>
+    <script src="dashboard.js?v=<?= (int) filemtime(__DIR__ . '/dashboard.js') ?>" defer></script>
 </body>
 </html>

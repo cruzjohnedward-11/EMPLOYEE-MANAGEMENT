@@ -1,159 +1,250 @@
 <?php
-$employees = [
-    ['name' => 'Amara Chen', 'email' => 'amara.chen@acme.co', 'role' => 'Chief Executive Officer', 'department' => 'Executive', 'status' => 'Active', 'salary' => 8400000, 'hired' => 'Jan 14, 2019', 'initials' => 'AC', 'tone' => 'mint'],
-    ['name' => 'Devon Park', 'email' => 'devon.park@acme.co', 'role' => 'Engineering Manager', 'department' => 'Engineering', 'status' => 'Active', 'salary' => 4800000, 'hired' => 'Mar 2, 2020', 'initials' => 'DP', 'tone' => 'cyan'],
-    ['name' => 'Liam Fitzgerald', 'email' => 'liam.fitzgerald@acme.co', 'role' => 'Software Engineer', 'department' => 'Engineering', 'status' => 'Probation', 'salary' => 2400000, 'hired' => 'Nov 4, 2024', 'initials' => 'LF', 'tone' => 'violet'],
-    ['name' => 'Maya Okafor', 'email' => 'maya.okafor@acme.co', 'role' => 'Product Designer', 'department' => 'Design', 'status' => 'Active', 'salary' => 2400000, 'hired' => 'Feb 7, 2022', 'initials' => 'MO', 'tone' => 'violet'],
-    ['name' => 'Noah Kim', 'email' => 'noah.kim@acme.co', 'role' => 'HR Generalist', 'department' => 'Human Resources', 'status' => 'Active', 'salary' => 1440000, 'hired' => 'May 1, 2023', 'initials' => 'NK', 'tone' => 'rose'],
-    ['name' => 'Priya Nair', 'email' => 'priya.nair@acme.co', 'role' => 'Sales Representative', 'department' => 'Sales', 'status' => 'Active', 'salary' => 1560000, 'hired' => 'Sep 13, 2021', 'initials' => 'PN', 'tone' => 'amber'],
-    ['name' => 'Sofia Reyes', 'email' => 'sofia.reyes@acme.co', 'role' => 'HR Manager', 'department' => 'Human Resources', 'status' => 'Active', 'salary' => 2160000, 'hired' => 'Aug 17, 2020', 'initials' => 'SR', 'tone' => 'mint'],
-    ['name' => 'Tom Becker', 'email' => 'tom.becker@acme.co', 'role' => 'Marketing Specialist', 'department' => 'Marketing', 'status' => 'On Leave', 'salary' => 1560000, 'hired' => 'Oct 24, 2022', 'initials' => 'TB', 'tone' => 'cyan'],
-    ['name' => 'Yuki Tanaka', 'email' => 'yuki.tanaka@acme.co', 'role' => 'Senior Software Engineer', 'department' => 'Engineering', 'status' => 'Active', 'salary' => 3600000, 'hired' => 'Jun 21, 2021', 'initials' => 'YT', 'tone' => 'rose'],
-];
+declare(strict_types=1);
 
-$candidates = [
-    ['name' => 'Marcus Webb', 'email' => 'marcus.webb@example.com', 'role' => 'Software Engineer', 'department' => 'Engineering', 'stage' => 'Screening', 'applied' => 'Aug 27, 2026', 'days' => 41],
-    ['name' => 'Elena Marquez', 'email' => 'elena.marquez@example.com', 'role' => 'Product Designer', 'department' => 'Design', 'stage' => 'Interviewing', 'applied' => 'Aug 15, 2026', 'days' => 53],
-];
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/dashboard-helpers.php';
 
-$candidateArchive = [
-    ['name' => 'Nia Patel', 'email' => 'nia.patel@example.com', 'role' => 'Frontend Developer', 'department' => 'Engineering', 'applied' => 'Jul 18, 2026', 'outcome' => 'Rejected', 'closed' => 'Aug 9, 2026'],
-    ['name' => 'Mateo Alvarez', 'email' => 'mateo.alvarez@example.com', 'role' => 'Sales Representative', 'department' => 'Sales', 'applied' => 'Jun 30, 2026', 'outcome' => 'Withdrew', 'closed' => 'Jul 12, 2026'],
-];
+$dashboardDataIsApiRequest = isset($_SERVER['SCRIPT_FILENAME'])
+    && realpath((string) $_SERVER['SCRIPT_FILENAME']) === __FILE__;
 
-$hiringHistory = [
-    ['name' => 'Grace Lin', 'email' => 'grace.l@jobstack.dev', 'role' => 'Senior Software Engineer', 'applied' => 'Apr 20, 2026', 'hired' => 'Jun 1, 2026', 'days' => 42],
-    ['name' => 'Omar Haddad', 'email' => 'omar.h@brightpath.io', 'role' => 'Sales Representative', 'applied' => 'May 11, 2026', 'hired' => 'Jun 29, 2026', 'days' => 49],
-    ['name' => 'Jonas Weber', 'email' => 'jonas.w@applynow.co', 'role' => 'Marketing Specialist', 'applied' => 'Jun 15, 2026', 'hired' => 'Aug 3, 2026', 'days' => 49],
-    ['name' => 'Aisha Bello', 'email' => 'aisha.b@hirelane.com', 'role' => 'Product Designer', 'applied' => 'Jul 28, 2026', 'hired' => 'Oct 2, 2026', 'days' => 66],
-];
+if ($dashboardDataIsApiRequest) {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, private');
 
-$onboardingPeople = [
-    ['name' => 'Liam Fitzgerald', 'initials' => 'LF', 'tone' => 'violet', 'started' => '2024-11-04', 'buddy' => 'Yuki Tanaka', 'groups' => [
-        'Orientation' => [['Day-one orientation session', true], ['Meet the team & assigned buddy', true], ['Office / remote setup walkthrough', true]],
-        'Requirements' => [['Signed employment contract', true], ['Government ID & tax forms submitted', true], ['Bank details for payroll', true], ['Work equipment issued', false]],
-        'Training' => [['Role-specific training plan assigned', true], ['Security & data-privacy training', false], ['Tools & access provisioned', false]],
-        'Policies' => [['Employee handbook reviewed', true], ['Code of conduct acknowledged', false], ['Leave & attendance policy briefed', false]],
-    ]],
-    ['name' => 'Yuki Tanaka', 'initials' => 'YT', 'tone' => 'rose', 'started' => '2021-06-21', 'buddy' => 'Devon Park', 'groups' => [
-        'Orientation' => [['Day-one orientation session', true], ['Meet the team & assigned buddy', true], ['Office / remote setup walkthrough', true]],
-        'Requirements' => [['Signed employment contract', true], ['Government ID & tax forms submitted', true], ['Bank details for payroll', true], ['Work equipment issued', true]],
-        'Training' => [['Role-specific training plan assigned', true], ['Security & data-privacy training', true], ['Tools & access provisioned', true]],
-        'Policies' => [['Employee handbook reviewed', true], ['Code of conduct acknowledged', true], ['Leave & attendance policy briefed', true]],
-    ]],
-];
+    if (!ems_is_authenticated()) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication required.']);
+        exit;
+    }
 
-/** @var array<string, list<array{id: string, name: string, assigned: bool, date: string}>> $onboardingTaskLists */
-$onboardingTaskLists = [
-    'Pre-Onboarding' => [
-        ['id' => 'w4-form', 'name' => 'Sign W-4 Form', 'assigned' => true, 'date' => '07/20/2020'],
-        ['id' => 'i9-form', 'name' => 'Sign I-9 Form', 'assigned' => true, 'date' => '07/20/2020'],
-        ['id' => 'nda', 'name' => 'Sign Non-Disclosure Agreement', 'assigned' => false, 'date' => '07/29/2020'],
-        ['id' => 'hr-meeting', 'name' => 'Meeting with HR manager', 'assigned' => false, 'date' => '07/29/2020'],
-    ],
-    'Onboarding' => [
-        ['id' => 'orientation', 'name' => 'Complete new-hire orientation', 'assigned' => false, 'date' => '07/29/2020'],
-        ['id' => 'team-introduction', 'name' => 'Meet the team', 'assigned' => false, 'date' => '07/29/2020'],
-        ['id' => 'equipment-setup', 'name' => 'Set up equipment and accounts', 'assigned' => false, 'date' => '07/29/2020'],
-    ],
-    'Post-Onboarding' => [
-        ['id' => 'first-check-in', 'name' => 'Complete first-week check-in', 'assigned' => false, 'date' => '07/29/2020'],
-        ['id' => 'training-review', 'name' => 'Review required training', 'assigned' => false, 'date' => '07/29/2020'],
-        ['id' => 'feedback', 'name' => 'Submit onboarding feedback', 'assigned' => false, 'date' => '07/29/2020'],
-    ],
-];
-
-$evaluations = [
-    ['employee' => 'Sofia Reyes', 'initials' => 'SR', 'department' => 'Human Resources', 'period' => '2026 Q1', 'score' => 90, 'status' => 'Acknowledged', 'reviewer' => 'Amara Chen', 'note' => 'Reduced time-to-hire by 22%'],
-    ['employee' => 'Priya Nair', 'initials' => 'PN', 'department' => 'Sales', 'period' => '2026 Q2', 'score' => 85, 'status' => 'Acknowledged', 'reviewer' => 'Amara Chen', 'note' => '118% of quarterly quota'],
-    ['employee' => 'Liam Fitzgerald', 'initials' => 'LF', 'department' => 'Engineering', 'period' => '2026 Q2', 'score' => 74, 'status' => 'Draft', 'reviewer' => 'Devon Park', 'note' => 'Improve deployment documentation'],
-    ['employee' => 'Maya Okafor', 'initials' => 'MO', 'department' => 'Design', 'period' => '2026 Q2', 'score' => 95, 'status' => 'Completed', 'reviewer' => 'Amara Chen', 'note' => 'Design system adoption across 3 teams'],
-    ['employee' => 'Yuki Tanaka', 'initials' => 'YT', 'department' => 'Engineering', 'period' => '2026 Q2', 'score' => 88, 'status' => 'Completed', 'reviewer' => 'Devon Park', 'note' => 'Cut p99 API latency by 40%'],
-    ['employee' => 'Devon Park', 'initials' => 'DP', 'department' => 'Engineering', 'period' => '2026 Q2', 'score' => 92, 'status' => 'Acknowledged', 'reviewer' => 'Amara Chen', 'note' => 'Shipped v2 platform migration ahead of schedule'],
-];
-
-$certifications = [
-    ['employee' => 'Devon Park', 'initials' => 'DP', 'tone' => 'cyan', 'name' => 'AWS Certified Solutions Architect', 'issuer' => 'Amazon Web Services', 'issued' => 'May 2025', 'expires' => 'May 2028', 'status' => 'Current'],
-    ['employee' => 'Sofia Reyes', 'initials' => 'SR', 'tone' => 'mint', 'name' => 'SHRM Certified Professional', 'issuer' => 'SHRM', 'issued' => 'Aug 2024', 'expires' => 'Aug 2027', 'status' => 'Current'],
-    ['employee' => 'Maya Okafor', 'initials' => 'MO', 'tone' => 'violet', 'name' => 'Professional UX Certification', 'issuer' => 'Nielsen Norman Group', 'issued' => 'Jun 2024', 'expires' => 'Nov 2026', 'status' => 'Renewal due'],
-    ['employee' => 'Yuki Tanaka', 'initials' => 'YT', 'tone' => 'rose', 'name' => 'Kubernetes Application Developer', 'issuer' => 'Cloud Native Computing Foundation', 'issued' => 'Feb 2025', 'expires' => 'Feb 2027', 'status' => 'Current'],
-];
-
-$hrRecords = [
-    ['employee' => 'Tom Becker', 'initials' => 'TB', 'tone' => 'cyan', 'title' => 'Campaign of the quarter', 'type' => 'Commendation', 'priority' => '', 'date' => 'May 30, 2026', 'description' => 'Spring relaunch campaign beat sign-up targets by 34%.', 'status' => 'Resolved', 'signature' => 'Signed by Tom Becker'],
-    ['employee' => 'Priya Nair', 'initials' => 'PN', 'tone' => 'amber', 'title' => 'Expense policy violation', 'type' => 'Violation', 'priority' => 'Medium', 'date' => 'Jun 18, 2026', 'description' => 'Client dinner submitted without itemized receipt; exceeds per-head limit.', 'status' => 'Resolved', 'signature' => 'Signed by Priya Nair'],
-    ['employee' => 'Priya Nair', 'initials' => 'PN', 'tone' => 'amber', 'title' => 'Missed CRM logging (first notice)', 'type' => 'Warning', 'priority' => 'Low', 'date' => 'Aug 5, 2026', 'description' => 'Three client calls in July were not logged in the CRM within 48h per policy.', 'status' => 'In Progress', 'signature' => ''],
-    ['employee' => 'Liam Fitzgerald', 'initials' => 'LF', 'tone' => 'violet', 'title' => 'Reminder: equipment return policy', 'type' => 'Memo', 'priority' => '', 'date' => 'Aug 12, 2026', 'description' => 'Test laptop issued for onboarding must be returned or swapped within 30 days.', 'status' => 'Open', 'signature' => ''],
-    ['employee' => 'Yuki Tanaka', 'initials' => 'YT', 'tone' => 'rose', 'title' => 'Exceptional incident response', 'type' => 'Commendation', 'priority' => '', 'date' => 'Sep 2, 2026', 'description' => 'Coordinated the production incident response and customer updates.', 'status' => 'Resolved', 'signature' => 'Signed by Yuki Tanaka'],
-];
-
-$leaveRequests = [
-    ['employee' => 'Yuki Tanaka', 'initials' => 'YT', 'tone' => 'rose', 'type' => 'Vacation', 'days' => 5, 'from' => 'Oct 5, 2026', 'to' => 'Oct 9, 2026', 'note' => 'Family trip'],
-    ['employee' => 'Maya Okafor', 'initials' => 'MO', 'tone' => 'violet', 'type' => 'Personal', 'days' => 1, 'from' => 'Sep 30, 2026', 'to' => 'Sep 30, 2026', 'note' => ''],
-];
-
-$leaveHistory = [
-    ['employee' => 'Devon Park', 'initials' => 'DP', 'tone' => 'cyan', 'type' => 'Personal', 'status' => 'Rejected', 'days' => 2, 'dates' => 'Jul 17, 2026 - Jul 18, 2026', 'note' => 'Overlaps with release freeze'],
-    ['employee' => 'Priya Nair', 'initials' => 'PN', 'tone' => 'amber', 'type' => 'Vacation', 'status' => 'Approved', 'days' => 10, 'dates' => 'Aug 3, 2026 - Aug 14, 2026', 'note' => ''],
-    ['employee' => 'Tom Becker', 'initials' => 'TB', 'tone' => 'cyan', 'type' => 'Sick', 'status' => 'Approved', 'days' => 5, 'dates' => 'Sep 14, 2026 - Sep 18, 2026', 'note' => 'Get well soon'],
-];
-
-$leaveBalances = [
-    ['name' => 'Amara Chen', 'initials' => 'AC', 'tone' => 'mint', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Devon Park', 'initials' => 'DP', 'tone' => 'cyan', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Yuki Tanaka', 'initials' => 'YT', 'tone' => 'rose', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Maya Okafor', 'initials' => 'MO', 'tone' => 'violet', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Liam Fitzgerald', 'initials' => 'LF', 'tone' => 'violet', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Sofia Reyes', 'initials' => 'SR', 'tone' => 'mint', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Noah Kim', 'initials' => 'NK', 'tone' => 'rose', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Priya Nair', 'initials' => 'PN', 'tone' => 'amber', 'vacation' => 20, 'sick' => 10, 'personal' => 5],
-    ['name' => 'Tom Becker', 'initials' => 'TB', 'tone' => 'cyan', 'vacation' => 20, 'sick' => 5, 'personal' => 5],
-];
-
-$jobTitles = [
-    ['department' => 'Design', 'title' => 'Product Designer', 'level' => 'Mid', 'description' => 'Owns product design and UX', 'salary' => 2400000, 'count' => 1],
-    ['department' => 'Engineering', 'title' => 'Engineering Manager', 'level' => 'Lead', 'description' => 'Leads the engineering team and delivery', 'salary' => 4800000, 'count' => 1],
-    ['department' => 'Engineering', 'title' => 'Senior Software Engineer', 'level' => 'Senior', 'description' => 'Designs and ships core product features', 'salary' => 3600000, 'count' => 1],
-    ['department' => 'Engineering', 'title' => 'Software Engineer', 'level' => 'Mid', 'description' => 'Builds and maintains product features', 'salary' => 2400000, 'count' => 1],
-    ['department' => 'Executive', 'title' => 'Chief Executive Officer', 'level' => 'Executive', 'description' => 'Leads company vision and strategy', 'salary' => 8400000, 'count' => 1],
-    ['department' => 'Human Resources', 'title' => 'HR Manager', 'level' => 'Lead', 'description' => 'Runs hiring, onboarding and people ops', 'salary' => 2160000, 'count' => 1],
-    ['department' => 'Human Resources', 'title' => 'HR Generalist', 'level' => 'Mid', 'description' => 'Supports day-to-day HR operations', 'salary' => 1440000, 'count' => 1],
-    ['department' => 'Marketing', 'title' => 'Marketing Specialist', 'level' => 'Mid', 'description' => 'Executes campaigns and brand programs', 'salary' => 1560000, 'count' => 1],
-    ['department' => 'Sales', 'title' => 'Sales Representative', 'level' => 'Mid', 'description' => 'Drives new business and account growth', 'salary' => 1560000, 'count' => 1],
-];
-
-$payrollAuditLogs = [
-    ['date' => 'Sep 18, 2026', 'time' => '10:42 AM', 'action' => 'Annual salary adjustment', 'employee' => 'Devon Park', 'before' => 4560000, 'after' => 4800000, 'actor' => 'Sofia Reyes', 'handoff' => 'Awaiting payroll review'],
-    ['date' => 'Aug 4, 2026', 'time' => '2:15 PM', 'action' => 'Promotion · Senior Software Engineer', 'employee' => 'Yuki Tanaka', 'before' => 3240000, 'after' => 3600000, 'actor' => 'Sofia Reyes', 'handoff' => 'Sample handoff'],
-    ['date' => 'Jul 1, 2026', 'time' => '9:08 AM', 'action' => 'Base salary correction', 'employee' => 'Maya Okafor', 'before' => 2280000, 'after' => 2400000, 'actor' => 'John Doe', 'handoff' => 'Awaiting payroll review'],
-];
-
-function ems_h(string|int|float|null $value): string
-{
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+        header('Allow: GET');
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed.']);
+        exit;
+    }
+} else {
+    ems_require_authentication();
 }
 
-function ems_money(int $amount): string
-{
-    return '&#8369;' . number_format($amount);
-}
+require_once __DIR__ . '/db.php';
 
-function ems_icon(string $name): string
-{
-    $paths = [
-        'grid' => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-        'users' => '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
-        'person-add' => '<path d="M15 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/>',
-        'sparkles' => '<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z"/><path d="m19 14 1.2 2.8L23 18l-2.8 1.2L19 22l-1.2-2.8L15 18l2.8-1.2L19 14Z"/>',
-        'performance' => '<path d="M12 3 14.3 4.2l2.6-.1 1.2 2.2 2.2 1.3-.5 2.6.5 2.6-2.2 1.3-1.2 2.2-2.6-.1L12 17l-2.3 1.2-2.6-.1-1.2-2.2-2.2-1.3.5-2.6-.5-2.6 2.2-1.3 1.2-2.2 2.6.1L12 3Z"/><path d="m9 10.5 2 2 4-4"/>',
-        'gavel' => '<path d="m14 13 7-7-3-3-7 7M5 21l8-8M7 8l3-3 9 9-3 3z"/>',
-        'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',
-        'settings' => '<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.7-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.7a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.7 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z"/>',
-        'chart' => '<path d="M4 19V5m0 14h17"/><path d="m7 15 4-4 3 2 6-7"/>',
-        'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
-        'briefcase' => '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"/>',
-        'logout' => '<path d="m10 17 5-5-5-5m5 5H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>',
+try {
+    $pdo = ems_db();
+    $displayLimitDefaults = [
+        'attendance_month_limit' => 12,
+        'department_chart_limit' => 10,
+        'evaluation_page_size' => 10,
+        'employee_page_size' => 10,
     ];
-    $content = $paths[$name] ?? '';
-    return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $content . '</svg>';
+    $displayLimitSettingNames = array_map(
+        static fn (string $key): string => 'dashboard_' . $key,
+        array_keys($displayLimitDefaults)
+    );
+    $displayLimitPlaceholders = implode(',', array_fill(0, count($displayLimitSettingNames), '?'));
+    $displayLimitQuery = $pdo->prepare(
+        'SELECT setting_name, setting_value
+         FROM settings
+         WHERE setting_name IN (' . $displayLimitPlaceholders . ')'
+    );
+    $displayLimitQuery->execute($displayLimitSettingNames);
+    $storedDisplayLimits = $displayLimitQuery->fetchAll(PDO::FETCH_KEY_PAIR);
+    $displayLimits = [];
+    foreach ($displayLimitDefaults as $key => $default) {
+        $settingName = 'dashboard_' . $key;
+        $minimum = str_ends_with($key, '_page_size') ? 5 : 1;
+        $maximum = str_ends_with($key, '_page_size') ? 100 : ($key === 'attendance_month_limit' ? 60 : 50);
+        $storedValue = $storedDisplayLimits[$settingName] ?? null;
+        $validatedValue = $storedValue === null
+            ? $default
+            : filter_var($storedValue, FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => $minimum, 'max_range' => $maximum],
+            ]);
+        if ($validatedValue === false) {
+            throw new RuntimeException('A dashboard display limit setting is invalid.');
+        }
+        $displayLimits[$key] = (int) $validatedValue;
+    }
+
+    if ($dashboardDataIsApiRequest) {
+        $dashboardCollections = [
+            'pipeline_counts' => $pdo
+                ->query('SELECT status, total FROM v_pipeline_counts ORDER BY status')
+                ->fetchAll(PDO::FETCH_ASSOC),
+            'headcount_by_department' => $pdo
+                ->query('SELECT department_id, department_name, headcount FROM v_headcount_by_department')
+                ->fetchAll(PDO::FETCH_ASSOC),
+            'attendance_pct' => $pdo
+                ->query('SELECT employee_id, attendance_month, days_present, days_absent, attendance_pct FROM v_attendance_pct ORDER BY attendance_month DESC, employee_id')
+                ->fetchAll(PDO::FETCH_ASSOC),
+            'current_base_salary' => $pdo
+                ->query('SELECT employee_id, full_name, job_title_name, base_salary, currency, effective_date FROM v_current_base_salary')
+                ->fetchAll(PDO::FETCH_ASSOC),
+            'display_limits' => $displayLimits,
+        ];
+
+        $json = json_encode(
+            ['data' => $dashboardCollections],
+            JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE
+        );
+        echo $json;
+        exit;
+    }
+
+    if (!isset($employees)) {
+        $employees = $pdo->query(
+        "SELECT e.employee_id, e.full_name AS name, e.email,
+                COALESCE(j.job_title_name, 'Unassigned') AS role,
+                COALESCE(d.department_name, 'Unassigned') AS department,
+                e.employment_status AS status,
+                COALESCE(s.base_salary, 0) AS salary,
+                DATE_FORMAT(e.hire_date, '%b %e, %Y') AS hired
+         FROM employees e
+         LEFT JOIN departments d ON d.department_id = e.department_id
+         LEFT JOIN job_titles j ON j.job_title_id = e.job_title_id
+         LEFT JOIN v_current_base_salary s ON s.employee_id = e.employee_id
+         ORDER BY e.last_name, e.first_name"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($employees as &$employee) {
+            $employee['salary'] = (float) $employee['salary'];
+            $employee['tone'] = ems_avatar_tone((int) $employee['employee_id']);
+            $employee['initials'] = ems_initials((string) $employee['name']);
+        }
+        unset($employee);
+    }
+
+    $stageCapacityQuery = $pdo->prepare(
+        'SELECT setting_value FROM settings WHERE setting_name = :setting_name'
+    );
+    $stageCapacityQuery->execute(['setting_name' => 'hiring_stage_capacity']);
+    $stageCapacityValue = $stageCapacityQuery->fetchColumn();
+    $hiringStageCapacity = $stageCapacityValue === false
+        ? 1
+        : filter_var($stageCapacityValue, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1, 'max_range' => 50],
+        ]);
+    if ($hiringStageCapacity === false) {
+        throw new RuntimeException('Hiring stage capacity setting is invalid.');
+    }
+
+    $candidates = $pdo->query(
+        "SELECT h.hiring_id, h.applicant_name AS name, h.email,
+                COALESCE(j.job_title_name, 'Unassigned') AS role,
+                COALESCE(d.department_name, 'Unassigned') AS department,
+                CASE h.status WHEN 'Interview' THEN 'Interviewing' ELSE h.status END AS stage,
+                DATE_FORMAT(h.application_date, '%b %e, %Y') AS applied,
+                GREATEST(DATEDIFF(CURRENT_DATE, h.application_date), 0) AS days,
+                h.updated_at AS queued_at, h.created_at
+         FROM hiring_pipeline h
+         LEFT JOIN job_titles j ON j.job_title_id = h.applied_job_title_id
+         LEFT JOIN departments d ON d.department_id = j.department_id
+         WHERE h.status IN ('Applied', 'Screening', 'Interview', 'Offer')
+         ORDER BY h.updated_at, h.created_at, h.hiring_id"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    $stageQueuePositions = [];
+    foreach ($candidates as &$candidate) {
+        $candidate['days'] = (int) $candidate['days'];
+        $candidate['queue_position'] = ($stageQueuePositions[$candidate['stage']] ?? 0) + 1;
+        $candidate['is_stage_active'] = $candidate['queue_position'] <= $hiringStageCapacity;
+        $stageQueuePositions[$candidate['stage']] = $candidate['queue_position'];
+    }
+    unset($candidate);
+
+    $candidateArchive = $pdo->query(
+        "SELECT u.hiring_id, u.applicant_name AS name, u.email,
+                COALESCE(u.applied_job_title, 'Unassigned') AS role,
+                COALESCE(d.department_name, 'Unassigned') AS department,
+                DATE_FORMAT(u.application_date, '%b %e, %Y') AS applied,
+                CASE u.outcome WHEN 'Withdrawn' THEN 'Withdrew' ELSE u.outcome END AS outcome,
+                DATE_FORMAT(u.decision_date, '%b %e, %Y') AS closed
+         FROM v_unhired_applicants u
+         LEFT JOIN hiring_pipeline h ON h.hiring_id = u.hiring_id
+         LEFT JOIN job_titles t ON t.job_title_id = h.applied_job_title_id
+         LEFT JOIN departments d ON d.department_id = t.department_id
+         ORDER BY u.decision_date DESC, u.hiring_id DESC"
+    )->fetchAll(PDO::FETCH_ASSOC);
+
+    $hiringHistory = $pdo->query(
+        "SELECT h.hiring_id, h.applicant_name AS name, h.email,
+                COALESCE(j.job_title_name, 'Unassigned') AS role,
+                DATE_FORMAT(h.application_date, '%b %e, %Y') AS applied,
+                DATE_FORMAT(h.hire_date, '%b %e, %Y') AS hired,
+                GREATEST(DATEDIFF(h.hire_date, h.application_date), 0) AS days
+         FROM hiring_pipeline h
+         LEFT JOIN job_titles j ON j.job_title_id = h.applied_job_title_id
+         WHERE h.status = 'Hired' AND h.hire_date IS NOT NULL
+         ORDER BY h.hire_date DESC, h.hiring_id DESC"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($hiringHistory as &$hire) {
+        $hire['days'] = (int) $hire['days'];
+    }
+    unset($hire);
+
+    $evaluations = $pdo->query(
+        "SELECT k.kpi_id, e.full_name AS employee, e.employee_id,
+                COALESCE(d.department_name, 'Unassigned') AS department,
+                k.review_period AS period, k.attendance_pct, k.training_completion_pct,
+                k.kpi_score AS score,
+                k.status, COALESCE(ev.full_name, 'Unassigned') AS reviewer,
+                COALESCE(k.comments, '') AS note
+         FROM kpi_records k
+         JOIN employees e ON e.employee_id = k.employee_id
+         LEFT JOIN departments d ON d.department_id = e.department_id
+         LEFT JOIN employees ev ON ev.employee_id = k.evaluator_id
+         ORDER BY k.review_period DESC, e.last_name, e.first_name"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($evaluations as &$evaluation) {
+        $evaluation['score'] = $evaluation['score'] === null ? null : (float) $evaluation['score'];
+        $evaluation['attendance_pct'] = $evaluation['attendance_pct'] === null
+            ? null
+            : (float) $evaluation['attendance_pct'];
+        $evaluation['training_completion_pct'] = $evaluation['training_completion_pct'] === null
+            ? null
+            : (float) $evaluation['training_completion_pct'];
+        $evaluation['tone'] = ems_avatar_tone((int) $evaluation['employee_id']);
+        $evaluation['initials'] = ems_initials((string) $evaluation['employee']);
+    }
+    unset($evaluation);
+
+    $jobTitles = $pdo->query(
+        "SELECT j.job_title_id,
+                d.department_name AS department,
+                j.job_title_name AS title,
+                j.level,
+                COALESCE(j.job_description, '') AS description,
+                COALESCE(j.max_salary, j.min_salary, 0) AS salary,
+                (SELECT COUNT(*) FROM employees e WHERE e.job_title_id = j.job_title_id) AS count
+         FROM job_titles j
+         JOIN departments d ON d.department_id = j.department_id
+         WHERE j.is_active = 1
+         ORDER BY d.department_name, j.job_title_name"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($jobTitles as &$jobTitle) {
+        $jobTitle['salary'] = (float) $jobTitle['salary'];
+        $jobTitle['count'] = (int) $jobTitle['count'];
+    }
+    unset($jobTitle);
+
+    // Pages with no database tables use placeholder data (see preview-data.php).
+    require_once __DIR__ . '/preview-data.php';
+    $previewData = ems_preview_data();
+    $onboardingPeople = $previewData['onboardingPeople'];
+    $onboardingTaskLists = $previewData['onboardingTaskLists'];
+    $certifications = $previewData['certifications'];
+    $hrRecords = $previewData['hrRecords'];
+    $leaveRequests = $leaveRequests ?? $previewData['leaveRequests']; // real data is set by leave.php
+    $leaveHistory = $leaveHistory ?? $previewData['leaveHistory']; // real data is set by leave.php
+    $leaveBalances = $leaveBalances ?? $previewData['leaveBalances']; // real data is set by leave.php
+    $payrollAuditLogs = $previewData['payrollAuditLogs'];
+} catch (Throwable $exception) {
+    error_log('EMS dashboard data query failed (' . get_class($exception) . ').');
+
+    if ($dashboardDataIsApiRequest) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Dashboard data is temporarily unavailable.']);
+        exit;
+    }
+
+    http_response_code(503);
+    exit('Dashboard data is temporarily unavailable.');
 }

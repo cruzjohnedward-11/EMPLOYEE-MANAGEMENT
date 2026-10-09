@@ -1,45 +1,37 @@
 <?php
-$stats = [
-    ['label' => 'Active employees', 'value' => '9', 'note' => '1 on leave', 'icon' => 'users', 'tone' => 'violet'],
-    ['label' => 'Avg. time-to-hire', 'value' => '47d', 'note' => '3 hires tracked', 'icon' => 'person-add', 'tone' => 'cyan'],
-    ['label' => 'Open HR records', 'value' => '2', 'note' => 'warnings, memos, violations', 'icon' => 'clipboard', 'tone' => 'amber'],
-    ['label' => 'Annual payroll', 'value' => '&#8369;28.3M', 'note' => 'base salaries of active staff', 'icon' => 'wallet', 'tone' => 'mint'],
-];
-$departments = [
-    ['name' => 'Engineering', 'count' => 4],
-    ['name' => 'Human Resources', 'count' => 1],
-    ['name' => 'Executive', 'count' => 1],
-    ['name' => 'Design', 'count' => 1],
-    ['name' => 'Sales', 'count' => 1],
-    ['name' => 'Marketing', 'count' => 1],
-];
-$leaveRequests = [
-    ['initials' => 'YT', 'name' => 'Yuki Tanaka', 'detail' => '5 days · from Oct 5', 'type' => 'Vacation', 'tone' => 'rose'],
-    ['initials' => 'MO', 'name' => 'Maya Okafor', 'detail' => '1 day · from Sep 30', 'type' => 'Personal', 'tone' => 'violet'],
-];
-$pipeline = [
-    ['name' => 'Applied', 'count' => 0, 'tone' => 'slate'],
-    ['name' => 'Screening', 'count' => 1, 'tone' => 'violet'],
-    ['name' => 'Interviewing', 'count' => 1, 'tone' => 'indigo'],
-    ['name' => 'Offer', 'count' => 1, 'tone' => 'mint'],
-];
-$records = [
-    ['initials' => 'LF', 'title' => 'Reminder: equipment return', 'person' => 'Liam Fitzgerald', 'status' => 'Open', 'tone' => 'violet'],
-    ['initials' => 'PN', 'title' => 'Missed CRM login target', 'person' => 'Priya Nair', 'status' => 'In Progress', 'tone' => 'amber'],
-];
+require_once __DIR__ . '/auth.php';
+ems_require_authentication();
+require_once __DIR__ . '/preview-data.php';
+$previewData = ems_preview_data();
+$previewOpenRecords = array_slice(array_values(array_filter($previewData['hrRecords'], static fn (array $record): bool => in_array($record['status'], ['Open', 'In Progress'], true))), 0, 3);
+$previewCompletion = 0;
+if ($previewData['onboardingPeople']) {
+    $previewDone = 0;
+    $previewTotal = 0;
+    foreach ($previewData['onboardingPeople'] as $previewPerson) {
+        foreach ($previewPerson['groups'] as $previewTasks) {
+            foreach ($previewTasks as $previewTask) {
+                $previewTotal++;
+                $previewDone += $previewTask[1] ? 1 : 0;
+            }
+        }
+    }
+    $previewCompletion = $previewTotal ? (int) round($previewDone / $previewTotal * 100) : 0;
+}
+
 $actions = [
     ['icon' => 'percent', 'title' => 'Run an evaluation', 'detail' => 'Score team members for the current quarter', 'href' => 'performance.php'],
-    ['icon' => 'badge-check', 'title' => 'Review probation', 'detail' => '1 employee in probation', 'href' => 'employees.php'],
+    ['icon' => 'badge-check', 'title' => 'Review probation', 'detail' => 'Review employees in probation', 'href' => 'employees.php'],
     ['icon' => 'arrow-up-right', 'title' => 'Update job titles', 'detail' => 'Keep salary bands and levels current', 'href' => 'settings.php'],
 ];
 $navItems = [
     ['title' => 'Overview', 'icon' => 'grid', 'href' => 'overview.php'],
     ['title' => 'Employees', 'icon' => 'users', 'href' => 'employees.php'],
-    ['title' => 'Hiring', 'icon' => 'person-add', 'href' => 'hiring.php', 'badge' => 2],
+    ['title' => 'Hiring', 'icon' => 'person-add', 'href' => 'hiring.php'],
     ['title' => 'Onboarding', 'icon' => 'sparkles', 'href' => 'onboarding.php'],
     ['title' => 'Performance', 'icon' => 'performance', 'href' => 'performance.php'],
     ['title' => 'HR Records', 'icon' => 'gavel', 'href' => 'hr-records.php'],
-    ['title' => 'Leave', 'icon' => 'calendar', 'href' => 'leave.php', 'badge' => 2],
+    ['title' => 'Leave', 'icon' => 'calendar', 'href' => 'leave.php'],
     ['title' => 'Settings', 'icon' => 'settings', 'href' => 'settings.php'],
     ['title' => 'Reports', 'icon' => 'chart', 'href' => 'reports.php'],
 ];
@@ -101,11 +93,14 @@ function dashboard_icon(string $name): string
         <div class="sidebar-bottom">
             <details class="account-menu">
                 <summary class="account-trigger">
-                    <span class="account-avatar" aria-hidden="true">JD</span>
-                    <span class="account-name">John Doe</span>
+                    <span class="account-avatar" aria-hidden="true"><?= htmlspecialchars(strtoupper(substr((string) $_SESSION['username'], 0, 2)), ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="account-name"><?= htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8') ?></span>
                     <span class="account-caret" aria-hidden="true"></span>
                 </summary>
-                <a class="sign-out" href="#"><?= dashboard_icon('logout') ?><span>Sign out</span></a>
+                <form method="post" action="logout.php">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+                    <button class="sign-out" type="submit"><?= dashboard_icon('logout') ?><span>Sign out</span></button>
+                </form>
             </details>
         </div>
     </aside>
@@ -118,41 +113,34 @@ function dashboard_icon(string $name): string
                 <div><h1 id="welcome-title">Welcome</h1><p class="page-subtitle">Your people operations at a glance — pipeline, performance, records and time off.</p></div>
             </section>
 
-            <section class="grid grid-4 dashboard-stats metrics-grid" aria-label="People operations summary">
-                <?php foreach ($stats as $stat): ?>
-                    <article class="card stat-card dashboard-stat <?= $stat['label'] === 'Annual payroll' ? 'card-featured' : '' ?>">
-                        <div><span class="card-header"><?= htmlspecialchars($stat['label']) ?></span><strong class="stat-value"><?= $stat['value'] ?></strong><span class="stat-desc"><?= htmlspecialchars($stat['note']) ?></span></div>
-                        <span class="stat-icon <?= htmlspecialchars($stat['tone']) ?>"><?= dashboard_icon($stat['icon']) ?></span>
-                    </article>
-                <?php endforeach; ?>
+            <section class="grid grid-4 dashboard-stats metrics-grid" aria-label="People operations summary" data-dashboard-metrics>
+                <article class="card stat-card dashboard-stat">
+                    <div><span class="card-header">Employees</span><strong class="stat-value" data-metric="headcount">—</strong><span class="stat-desc">Active and probationary</span></div>
+                    <span class="stat-icon violet"><?= dashboard_icon('users') ?></span>
+                </article>
+                <article class="card stat-card dashboard-stat">
+                    <div><span class="card-header">Active pipeline</span><strong class="stat-value" data-metric="active-pipeline">—</strong><span class="stat-desc">Applied through offer</span></div>
+                    <span class="stat-icon cyan"><?= dashboard_icon('person-add') ?></span>
+                </article>
+                <article class="card stat-card dashboard-stat">
+                    <div><span class="card-header">Attendance</span><strong class="stat-value" data-metric="attendance">—</strong><span class="stat-desc" data-metric="attendance-period">Latest recorded month</span></div>
+                    <span class="stat-icon amber"><?= dashboard_icon('calendar') ?></span>
+                </article>
+                <article class="card stat-card dashboard-stat card-featured">
+                    <div><span class="card-header">Current base payroll</span><strong class="stat-value" data-metric="payroll">—</strong><span class="stat-desc">From current compensation records</span></div>
+                    <span class="stat-icon mint"><?= dashboard_icon('wallet') ?></span>
+                </article>
+                <p class="sr-only" data-dashboard-metrics-feedback role="status" aria-live="polite"></p>
             </section>
 
             <section class="grid grid-2 dashboard-charts" aria-label="Workforce charts">
                 <article class="card chart-card performance-card">
-                    <div class="section-title"><div><h2>Performance trend</h2><p>Average evaluation score by period</p></div></div>
-                    <div class="performance-chart" role="img" aria-label="Average performance scores fluctuated across 2026: 78 in Q1, 91 in Q2, 84 in Q3, and 94 in Q4">
-                        <div class="chart-y-labels"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
-                        <div class="chart-plot">
-                            <div class="chart-gridlines"><i></i><i></i><i></i><i></i><i></i></div>
-                            <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
-                                <path class="chart-area" d="M0 44 C70 44 130 18 200 18 S330 32 400 32 S530 12 600 12 L600 200 L0 200 Z"></path>
-                                <path class="chart-stroke" d="M0 44 C70 44 130 18 200 18 S330 32 400 32 S530 12 600 12"></path>
-                                <circle class="chart-point" cx="0" cy="44" r="4"></circle>
-                                <circle class="chart-point" cx="200" cy="18" r="4"></circle>
-                                <circle class="chart-point" cx="400" cy="32" r="4"></circle>
-                                <circle class="chart-point" cx="600" cy="12" r="4"></circle>
-                            </svg>
-                            <div class="chart-x-labels"><span>2026 Q1</span><span>2026 Q2</span><span>2026 Q3</span><span>2026 Q4</span></div>
-                        </div>
-                    </div>
+                    <div class="section-title"><div><h2>Attendance trend</h2><p data-attendance-limit-label>Monthly average across employees with recorded attendance</p></div></div>
+                    <div class="department-bars" data-attendance-trend><p class="empty-state">Loading attendance data</p></div>
                 </article>
                 <article class="card chart-card department-card">
-                    <div class="section-title"><div><h2>Headcount by department</h2><p>9 active employees</p></div></div>
-                    <div class="department-bars">
-                        <?php foreach ($departments as $department): ?>
-                            <div class="department-row"><span><?= htmlspecialchars($department['name']) ?></span><div class="bar-track"><i style="width: <?= (int) ($department['count'] / 4 * 100) ?>%"></i></div><b><?= (int) $department['count'] ?></b></div>
-                        <?php endforeach; ?>
-                    </div>
+                    <div class="section-title"><div><h2>Headcount by department</h2><p data-metric="department-total">Loading workforce data</p><small data-department-limit-label></small></div></div>
+                    <div class="department-bars" data-department-bars></div>
                 </article>
             </section>
 
@@ -160,28 +148,21 @@ function dashboard_icon(string $name): string
                 <article class="card dashboard-panel">
                     <div class="panel-heading"><h2><span class="panel-symbol amber"><?= dashboard_icon('calendar') ?></span>Leave awaiting approval</h2><a href="leave.php">View all</a></div>
                     <div class="person-list">
-                        <?php foreach ($leaveRequests as $request): ?>
-                            <div class="person-row"><span class="avatar <?= htmlspecialchars($request['tone']) ?>"><?= htmlspecialchars($request['initials']) ?></span><span class="person-copy"><strong><?= htmlspecialchars($request['name']) ?></strong><small><?= htmlspecialchars($request['detail']) ?></small></span><span class="pill <?= htmlspecialchars($request['tone']) ?>"><?= htmlspecialchars($request['type']) ?></span></div>
-                        <?php endforeach; ?>
+                        <p class="empty-state">Leave requests are not stored in the current database schema.</p>
                     </div>
                 </article>
                 <article class="card dashboard-panel">
                     <div class="panel-heading"><h2><span class="panel-symbol indigo"><?= dashboard_icon('person-add') ?></span>Hiring pipeline</h2><a href="hiring.php">View all</a></div>
-                    <div class="pipeline-list">
-                        <?php foreach ($pipeline as $stage): ?>
-                            <div class="pipeline-stage"><div class="pipeline-label"><span class="pill <?= htmlspecialchars($stage['tone']) ?>"><?= htmlspecialchars($stage['name']) ?></span><span><?= (int) $stage['count'] ?></span></div><div class="pipeline-track"><i class="<?= htmlspecialchars($stage['tone']) ?>" style="width: <?= $stage['count'] ? '100' : '0' ?>%"></i></div></div>
-                        <?php endforeach; ?>
-                    </div>
-                    <p class="panel-note">Avg. time-to-hire: 47 days</p>
+                            <div class="pipeline-list" data-pipeline-stages><p class="empty-state">Loading pipeline data</p></div>
+                    <p class="panel-note" data-metric="pipeline-total"></p>
                 </article>
                 <article class="card dashboard-panel resolution-panel">
                     <div class="panel-heading"><h2><span class="panel-symbol rose"><?= dashboard_icon('gavel') ?></span>Needs resolution</h2><a href="hr-records.php">View all</a></div>
                     <div class="record-list">
-                        <?php foreach ($records as $record): ?>
-                            <div class="record-row"><span class="avatar <?= htmlspecialchars($record['tone']) ?>"><?= htmlspecialchars($record['initials']) ?></span><span class="person-copy"><strong><?= htmlspecialchars($record['title']) ?></strong><small><?= htmlspecialchars($record['person']) ?></small></span><span class="pill <?= htmlspecialchars($record['tone']) ?>"><?= htmlspecialchars($record['status']) ?></span></div>
-                        <?php endforeach; ?>
+                        <?php foreach ($previewOpenRecords as $previewRecord): ?><div class="record-row"><span class="avatar <?= ems_h($previewRecord['tone']) ?>"><?= ems_h($previewRecord['initials']) ?></span><span><strong><?= ems_h($previewRecord['title']) ?></strong><small><?= ems_h($previewRecord['employee']) ?></small></span><span class="pill <?= $previewRecord['status'] === 'Open' ? 'rose' : 'amber' ?>"><?= ems_h($previewRecord['status']) ?></span></div><?php endforeach; ?>
+                        <p class="panel-note">Preview data. Not connected to the database.</p>
                     </div>
-                    <div class="onboarding-progress"><div><span class="progress-label"><?= dashboard_icon('sparkles') ?>Onboarding completion</span><strong>81%</strong></div><div class="progress"><span style="width: 81%"></span></div></div>
+                    <div class="onboarding-progress"><div><span class="progress-label"><?= dashboard_icon('sparkles') ?>Onboarding completion</span><strong><?= $previewCompletion ?>%</strong></div><div class="progress"><span style="width: <?= $previewCompletion ?>%"></span></div></div>
                 </article>
             </section>
 

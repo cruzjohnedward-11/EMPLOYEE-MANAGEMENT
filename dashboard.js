@@ -26,6 +26,202 @@ if (themeSelect) {
     });
 }
 
+const dashboardMetrics = document.querySelector('[data-dashboard-metrics]');
+
+if (dashboardMetrics) {
+    const feedback = dashboardMetrics.querySelector('[data-dashboard-metrics-feedback]');
+    const setMetric = (name, value) => {
+        const element = dashboardMetrics.querySelector(`[data-metric="${name}"]`);
+        if (element) element.textContent = value;
+    };
+
+    fetch('dashboard-data.php', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+    })
+        .then(async (response) => {
+            let payload;
+            try {
+                payload = await response.json();
+            } catch {
+                throw new Error('Invalid dashboard response.');
+            }
+
+            if (!response.ok || !payload?.data) {
+                throw new Error('Dashboard request failed.');
+            }
+
+            const collections = payload.data;
+            if (
+                !Array.isArray(collections.pipeline_counts)
+                || !Array.isArray(collections.headcount_by_department)
+                || !Array.isArray(collections.attendance_pct)
+                || !Array.isArray(collections.current_base_salary)
+                || !collections.display_limits
+            ) {
+                throw new Error('Dashboard response is incomplete.');
+            }
+            const attendanceMonthLimit = Number(collections.display_limits.attendance_month_limit) || 12;
+            const departmentLimit = Number(collections.display_limits.department_chart_limit) || 10;
+            const attendanceLimitLabel = document.querySelector('[data-attendance-limit-label]');
+            if (attendanceLimitLabel) attendanceLimitLabel.textContent = `Monthly average · latest ${attendanceMonthLimit} months`;
+            const departmentLimitLabel = document.querySelector('[data-department-limit-label]');
+            if (departmentLimitLabel) departmentLimitLabel.textContent = `Showing up to ${departmentLimit} departments`;
+
+            const counts = new Map(collections.pipeline_counts.map((row) => [row.status, Number(row.total) || 0]));
+            const openStages = ['Applied', 'Screening', 'Interview', 'Offer'];
+            const activePipelineTotal = openStages.reduce((total, stage) => total + (counts.get(stage) || 0), 0);
+            const headcount = collections.headcount_by_department.reduce(
+                (total, row) => total + (Number(row.headcount) || 0),
+                0,
+            );
+            const payroll = collections.current_base_salary.reduce(
+                (total, row) => total + (Number(row.base_salary) || 0),
+                0,
+            );
+            const latestAttendanceMonth = collections.attendance_pct
+                .map((row) => row.attendance_month)
+                .filter((month) => typeof month === 'string')
+                .sort()
+                .at(-1);
+            const monthlyAttendance = latestAttendanceMonth
+                ? collections.attendance_pct.filter((row) => row.attendance_month === latestAttendanceMonth)
+                : [];
+            const attendanceValues = monthlyAttendance
+                .filter((row) => row.attendance_pct !== null && row.attendance_pct !== '')
+                .map((row) => Number(row.attendance_pct))
+                .filter(Number.isFinite);
+            const attendanceAverage = attendanceValues.length
+                ? `${(attendanceValues.reduce((total, value) => total + value, 0) / attendanceValues.length).toFixed(1)}%`
+                : '—';
+
+            setMetric('headcount', String(headcount));
+            setMetric('active-pipeline', String(activePipelineTotal));
+            setMetric('attendance', attendanceAverage);
+            setMetric('attendance-period', latestAttendanceMonth || 'No attendance recorded');
+            setMetric('payroll', new Intl.NumberFormat('en-PH', {
+                style: 'currency',
+                currency: 'PHP',
+                maximumFractionDigits: 0,
+            }).format(payroll));
+            setMetric('department-total', `${headcount} employees`);
+            setMetric('pipeline-total', `${activePipelineTotal} candidates in active stages`);
+
+            const departmentBars = document.querySelector('[data-department-bars]');
+            if (departmentBars) {
+                departmentBars.replaceChildren();
+                const visibleDepartments = [...collections.headcount_by_department]
+                    .sort((left, right) => (Number(right.headcount) || 0) - (Number(left.headcount) || 0))
+                    .slice(0, departmentLimit);
+                const maxHeadcount = Math.max(
+                    1,
+                    ...visibleDepartments.map((row) => Number(row.headcount) || 0),
+                );
+                visibleDepartments.forEach((row) => {
+                    const count = Number(row.headcount) || 0;
+                    const line = document.createElement('div');
+                    line.className = 'department-row';
+                    const name = document.createElement('span');
+                    name.textContent = row.department_name;
+                    const track = document.createElement('div');
+                    track.className = 'bar-track';
+                    const bar = document.createElement('i');
+                    bar.style.width = `${(count / maxHeadcount) * 100}%`;
+                    track.append(bar);
+                    const value = document.createElement('b');
+                    value.textContent = String(count);
+                    line.append(name, track, value);
+                    departmentBars.append(line);
+                });
+            }
+
+            const attendanceTrend = document.querySelector('[data-attendance-trend]');
+            if (attendanceTrend) {
+                attendanceTrend.replaceChildren();
+                const monthlyValues = new Map();
+                collections.attendance_pct.forEach((row) => {
+                    if (row.attendance_pct === null || row.attendance_pct === '' || typeof row.attendance_month !== 'string') return;
+                    const value = Number(row.attendance_pct);
+                    if (!Number.isFinite(value)) return;
+                    const values = monthlyValues.get(row.attendance_month) || [];
+                    values.push(value);
+                    monthlyValues.set(row.attendance_month, values);
+                });
+                const months = [...monthlyValues.keys()].sort().slice(-attendanceMonthLimit);
+                if (!months.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'empty-state';
+                    empty.textContent = 'No attendance has been recorded.';
+                    attendanceTrend.append(empty);
+                } else {
+                    months.forEach((month) => {
+                        const values = monthlyValues.get(month);
+                        const average = values.reduce((total, value) => total + value, 0) / values.length;
+                        const row = document.createElement('div');
+                        row.className = 'department-row';
+                        const label = document.createElement('span');
+                        label.textContent = month;
+                        const track = document.createElement('div');
+                        track.className = 'bar-track';
+                        const bar = document.createElement('i');
+                        bar.style.width = `${Math.min(100, Math.max(0, average))}%`;
+                        track.append(bar);
+                        const value = document.createElement('b');
+                        value.textContent = `${average.toFixed(1)}%`;
+                        row.append(label, track, value);
+                        attendanceTrend.append(row);
+                    });
+                }
+            }
+
+            const pipelineContainer = document.querySelector('[data-pipeline-stages]');
+            if (pipelineContainer) {
+                pipelineContainer.replaceChildren();
+                const toneByStage = {
+                    Applied: 'slate',
+                    Screening: 'violet',
+                    Interview: 'indigo',
+                    Offer: 'mint',
+                };
+                openStages.forEach((stage) => {
+                    const count = counts.get(stage) || 0;
+                    const tone = toneByStage[stage];
+                    const line = document.createElement('div');
+                    line.className = 'pipeline-stage';
+                    const label = document.createElement('div');
+                    label.className = 'pipeline-label';
+                    const pill = document.createElement('span');
+                    pill.className = `pill ${tone}`;
+                    pill.textContent = stage;
+                    const value = document.createElement('span');
+                    value.textContent = String(count);
+                    label.append(pill, value);
+                    const track = document.createElement('div');
+                    track.className = 'pipeline-track';
+                    const bar = document.createElement('i');
+                    bar.className = tone;
+                    bar.style.width = `${count ? Math.max(8, (count / Math.max(1, activePipelineTotal)) * 100) : 0}%`;
+                    track.append(bar);
+                    line.append(label, track);
+                    pipelineContainer.append(line);
+                });
+            }
+        })
+        .catch(() => {
+            if (feedback) feedback.textContent = 'Dashboard metrics could not be loaded.';
+            setMetric('department-total', 'Workforce data unavailable');
+            setMetric('pipeline-total', 'Pipeline data unavailable');
+            document.querySelectorAll('[data-department-bars], [data-attendance-trend], [data-pipeline-stages]').forEach((container) => {
+                container.replaceChildren();
+                const empty = document.createElement('p');
+                empty.className = 'empty-state';
+                empty.textContent = 'Dashboard data could not be loaded.';
+                container.append(empty);
+            });
+            console.error('Unable to load EMS dashboard metrics.');
+        });
+}
+
 const dialog = document.querySelector('#dashboard-form-dialog');
 
 if (dialog) {
@@ -149,6 +345,33 @@ if (taskPanel) {
 
 const applicantBrowser = document.querySelector('[data-applicant-browser]');
 
+const renderPageNumbers = (container, page, pageCount, onNavigate) => {
+    if (!container) return;
+    container.replaceChildren();
+    const visiblePages = new Set([1, pageCount]);
+    for (let number = Math.max(1, page - 2); number <= Math.min(pageCount, page + 2); number += 1) {
+        visiblePages.add(number);
+    }
+
+    let previousPage = 0;
+    [...visiblePages].sort((left, right) => left - right).forEach((number) => {
+        if (number - previousPage > 1) {
+            const gap = document.createElement('span');
+            gap.textContent = '…';
+            gap.setAttribute('aria-hidden', 'true');
+            container.append(gap);
+        }
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = String(number);
+        button.setAttribute('aria-label', `Page ${number}`);
+        if (number === page) button.setAttribute('aria-current', 'page');
+        button.addEventListener('click', () => onNavigate(number));
+        container.append(button);
+        previousPage = number;
+    });
+};
+
 if (applicantBrowser) {
     const tabs = [...applicantBrowser.querySelectorAll('[data-applicant-tab]')];
     const panels = [...applicantBrowser.querySelectorAll('[data-applicant-panel]')];
@@ -182,6 +405,10 @@ if (applicantBrowser) {
         panel.querySelector('[data-page-indicator]').textContent = `Page ${page} of ${pageCount}`;
         panel.querySelector('[data-page-prev]').disabled = page <= 1;
         panel.querySelector('[data-page-next]').disabled = page >= pageCount;
+        renderPageNumbers(panel.querySelector('[data-page-numbers]'), page, pageCount, (targetPage) => {
+            panel.dataset.page = String(targetPage);
+            renderApplicants(panel);
+        });
     };
 
     const renderActivePanel = () => {
@@ -235,26 +462,43 @@ if (applicantBrowser) {
         });
     });
 
-    applicantBrowser.addEventListener('click', (event) => {
-        const action = event.target.closest('[data-preview-action]');
-        if (!action) return;
-        const candidate = action.closest('.candidate-card, tr')?.querySelector('strong')?.textContent;
-        applicantBrowser.querySelector('[data-applicant-feedback]').textContent =
-            `${action.dataset.previewAction}${candidate ? ` for ${candidate}` : ''} is a UI preview only; applicant updates require backend integration.`;
-        action.closest('details')?.removeAttribute('open');
-    });
-
-    applicantBrowser.addEventListener('change', (event) => {
-        const actionSelect = event.target.closest('[data-preview-action-select]');
-        if (!actionSelect || actionSelect.value === '') return;
-        const candidate = actionSelect.closest('tr')?.querySelector('strong')?.textContent;
-        applicantBrowser.querySelector('[data-applicant-feedback]').textContent =
-            `${actionSelect.value}${candidate ? ` for ${candidate}` : ''} is a UI preview only; applicant updates require backend integration.`;
-        actionSelect.value = '';
-    });
-
     renderActivePanel();
 }
+
+document.querySelectorAll('[data-record-pager]').forEach((pager) => {
+    const rows = [...pager.querySelectorAll('[data-paginated-row]')];
+    const emptyState = pager.querySelector('[data-pager-empty]');
+    const pageSize = Math.max(1, Number(pager.dataset.pageSize) || 10);
+    const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+    let page = 1;
+
+    const render = () => {
+        const start = (page - 1) * pageSize;
+        rows.forEach((row) => { row.hidden = true; });
+        rows.slice(start, start + pageSize).forEach((row) => { row.hidden = false; });
+        if (emptyState) emptyState.hidden = rows.length > 0;
+        pager.querySelector('[data-page-summary]').textContent = rows.length
+            ? `Showing ${start + 1}–${Math.min(start + pageSize, rows.length)} of ${rows.length}`
+            : 'Showing 0 records';
+        pager.querySelector('[data-page-indicator]').textContent = `Page ${page} of ${pageCount}`;
+        pager.querySelector('[data-page-prev]').disabled = page <= 1;
+        pager.querySelector('[data-page-next]').disabled = page >= pageCount;
+        renderPageNumbers(pager.querySelector('[data-page-numbers]'), page, pageCount, (targetPage) => {
+            page = targetPage;
+            render();
+        });
+    };
+
+    pager.querySelector('[data-page-prev]').addEventListener('click', () => {
+        page = Math.max(1, page - 1);
+        render();
+    });
+    pager.querySelector('[data-page-next]').addEventListener('click', () => {
+        page = Math.min(pageCount, page + 1);
+        render();
+    });
+    render();
+});
 
 document.querySelectorAll('[data-export-table]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -279,3 +523,29 @@ document.querySelectorAll('[data-export-table]').forEach((button) => {
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
 });
+
+// Employees: Edit profile modal closes on backdrop click or Escape (typed values stay until the page reloads)
+(() => {
+    const openPopups = () => [...document.querySelectorAll('details.employee-edit[open]')];
+
+    document.addEventListener('click', (event) => {
+        openPopups().forEach((popup) => {
+            // target === popup means the dark backdrop (its ::before) was clicked
+            if (!popup.contains(event.target) || event.target === popup) popup.open = false;
+        });
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        openPopups().forEach((popup) => {
+            popup.open = false;
+            popup.querySelector('summary')?.focus();
+        });
+    });
+
+    // Lets the CSS lift the layout containment that would otherwise trap the fixed modal
+    document.addEventListener('toggle', (event) => {
+        if (!event.target.matches?.('details.employee-edit')) return;
+        document.body.classList.toggle('edit-modal-open', openPopups().length > 0);
+    }, true);
+})();

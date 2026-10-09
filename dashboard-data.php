@@ -184,6 +184,7 @@ try {
         "SELECT k.kpi_id, e.full_name AS employee, e.employee_id,
                 COALESCE(d.department_name, 'Unassigned') AS department,
                 k.review_period AS period, k.attendance_pct, k.training_completion_pct,
+                k.okr_achievement, k.core_competencies, k.feedback_score,
                 k.kpi_score AS score,
                 k.status, COALESCE(ev.full_name, 'Unassigned') AS reviewer,
                 COALESCE(k.comments, '') AS note
@@ -201,6 +202,9 @@ try {
         $evaluation['training_completion_pct'] = $evaluation['training_completion_pct'] === null
             ? null
             : (float) $evaluation['training_completion_pct'];
+        foreach (['okr_achievement', 'core_competencies', 'feedback_score'] as $component) {
+            $evaluation[$component] = $evaluation[$component] === null ? null : (float) $evaluation[$component];
+        }
         $evaluation['tone'] = ems_avatar_tone((int) $evaluation['employee_id']);
         $evaluation['initials'] = ems_initials((string) $evaluation['employee']);
     }

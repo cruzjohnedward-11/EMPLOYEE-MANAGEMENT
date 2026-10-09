@@ -40,7 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $periodValue = $_POST['review_period'] ?? null;
             $attendanceValue = $_POST['attendance_pct'] ?? '';
             $trainingValue = $_POST['training_completion_pct'] ?? '';
-            $scoreValue = $_POST['kpi_score'] ?? null;
+            $okrValue = $_POST['okr_achievement'] ?? null;
+            $competenciesValue = $_POST['core_competencies'] ?? null;
+            $feedbackValue = $_POST['feedback_score'] ?? null;
             $status = $_POST['status'] ?? null;
             $comments = $_POST['comments'] ?? '';
 
@@ -65,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $parsePercentage = static function (mixed $value, bool $required = false): ?string {
                 if ($value === '' || $value === null) {
                     if ($required) {
-                        throw new InvalidArgumentException('Enter a KPI score from 0 to 100.');
+                        throw new InvalidArgumentException('OKR Achievement, Core Competencies and Peer / Manager Feedback are required (0 to 100).');
                     }
                     return null;
                 }
@@ -83,7 +85,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $attendance = $parsePercentage($attendanceValue);
             $trainingCompletion = $parsePercentage($trainingValue);
-            $score = $parsePercentage($scoreValue, true);
+            $okr = $parsePercentage($okrValue, true);
+            $competencies = $parsePercentage($competenciesValue, true);
+            $feedbackScore = $parsePercentage($feedbackValue, true);
+
+            // Total Score = (OKR x 50%) + (Core Competencies x 30%) + (Peer / Manager Feedback x 20%)
+            $score = number_format(
+                ((float) $okr * 0.50) + ((float) $competencies * 0.30) + ((float) $feedbackScore * 0.20),
+                2,
+                '.',
+                ''
+            );
 
             $pdo->beginTransaction();
             try {
@@ -113,9 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insert = $pdo->prepare(
                     'INSERT INTO kpi_records
                         (employee_id, review_period, attendance_pct, training_completion_pct,
+                         okr_achievement, core_competencies, feedback_score,
                          kpi_score, evaluator_id, status, comments)
                      VALUES
                         (:employee_id, :review_period, :attendance_pct, :training_completion_pct,
+                         :okr_achievement, :core_competencies, :feedback_score,
                          :kpi_score, :evaluator_id, :status, :comments)'
                 );
                 $insert->execute([
@@ -123,6 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'review_period' => trim($periodValue),
                     'attendance_pct' => $attendance,
                     'training_completion_pct' => $trainingCompletion,
+                    'okr_achievement' => $okr,
+                    'core_competencies' => $competencies,
+                    'feedback_score' => $feedbackScore,
                     'kpi_score' => $score,
                     'evaluator_id' => $evaluatorId,
                     'status' => $status,

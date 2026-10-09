@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance - EMS</title>
+    <meta http-equiv="refresh" content="0; url=performance.php">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo"><span class="logo-icon">EMS</span><div><div>EMS</div><div class="logo-subtitle">People Operations</div></div></div>
+        <div class="sidebar-category">Workspace</div>
+        <ul class="sidebar-menu">
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="employees.html">Employees</a></li>
+            <li><a href="hiring.html">Hiring <span class="badge">3</span></a></li>
+            <li><a href="onboarding.html">Onboarding</a></li>
+            <li><a href="performance.html" class="active">Performance</a></li>
+            <li><a href="hr-records.html">HR Records</a></li>
+            <li><a href="leave.html">Leave <span class="badge">2</span></a></li>
+            <li><a href="settings.html">Settings</a></li>
+        </ul>
+    </aside>
+    <main class="main-content">
+        <header class="header"><div>Performance</div><div>Acme Inc. - FY2026</div></header>
+        <div class="container">
+            <div class="page-title">
+                <div>
+                    <h1>Performance - KPI</h1>
+                    <p class="page-subtitle">Records employee performance, evaluations and achievements - from draft to signed acknowledgment.</p>
+                </div>
+                <button class="btn-primary">+ New evaluation</button>
+            </div>
+
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-header">Average score</div>
+                    <div class="stat-value">90</div>
+                    <div class="stat-desc">5 completed evaluations</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Awaiting acknowledgment</div>
+                    <div class="stat-value">2</div>
+                    <div class="stat-desc">completed, not yet signed</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Drafts in progress</div>
+                    <div class="stat-value">1</div>
+                    <div class="stat-desc">not yet finalized</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">Top performers</div>
+                    <ul style="list-style: none;">
+                        <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+                            <div><strong>Maya Okafor</strong><br><span class="stat-desc">Design</span></div>
+                            <div style="font-weight: bold; color: #16a34a;">95</div>
+                        </li>
+                        <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+                            <div><strong>Devon Park</strong><br><span class="stat-desc">Engineering</span></div>
+                            <div style="font-weight: bold; color: #16a34a;">92</div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-header">Score distribution</div>
+                    <div class="stat-desc">Completed evaluations</div>
+                    <!-- Distribution bar charts can be built using inline CSS backgrounds -->
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

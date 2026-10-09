@@ -1,0 +1,96 @@
+# Employee Management System (EMS)
+
+A clean, native PHP Employee Management System built to handle basic company workflows, role-based access, dashboard charts, and dual deployment (XAMPP or Docker).
+
+---
+
+## ⚙️ How It Works (Database Routing)
+
+The system automatically detects your environment and routes your database traffic without manual configuration changes:
+
+*   **Docker Mode:** Routes requests internally to the database container named `db`.
+*   **XAMPP Mode:** Automatically falls back to standard `127.0.0.1` (localhost).
+
+---
+
+## 🚀 Setup Instructions
+
+Choose **one** of the paths below to get the application running on your machine.
+
+### Option A: XAMPP Setup (Traditional Local Server)
+
+#### Prerequisites
+*   [XAMPP](https://apachefriends.org) installed with PHP 8.2 or higher.
+
+#### Step-by-Step
+1.  **Move the project folder** into your XAMPP server directory:  
+    `C:\xampp\htdocs\EMPLOYEE-MANAGEMENT`
+2.  **Start XAMPP:** Open the XAMPP Control Panel and start both **Apache** and **MySQL**.
+3.  **Create the Database:** Open your browser, go to `http://localhost/phpmyadmin`, and create a new database named **`ems_db`**.
+4.  **Import Schema:** Click the **Import** tab inside `ems_db`, select the `employee_management.sql` file from your project folder, and click **Go**.
+5.  **Open the App:** Navigate to your login gate:  
+    👉 **`http://localhost/EMPLOYEE-MANAGEMENT/login.php`**
+
+---
+
+### Option B: Docker Setup (Zero-Configuration Server)
+
+#### Prerequisites
+*   [Docker Desktop](https://docker.com) installed and running.
+
+#### Step-by-Step
+1.  Open your terminal in the **root project directory**.
+2.  Start the background containers:
+    ```bash
+    docker compose up -d
+    ```
+3.  **Open the App:** Navigate to:  
+    👉 **`http://localhost:8080/login.php`**
+4.  *To stop the server at any time, run:* `docker compose down`
+
+---
+
+## 📊 Generating Mock Data (Seeder Script)
+
+The project includes a command-line script to quickly populate your database with 100 fake employees, attendance logs, and dashboard metrics for testing.
+
+### Running the Seeder via Terminal
+Open your terminal in the project root folder and choose one of these options:
+
+#### 1. Wipe & Fresh Start (Recommended)
+This clears out any old, broken test entries and installs 100 perfectly clean, linked records:
+```bash
+# General Command
+php mock_data_script/seeder.php --flush
+
+# Windows PowerShell Fix (If the raw command just opens the file in VS Code)
+& C:\xampp\php\php.exe mock_data_script\seeder.php --flush
+```
+
+#### 2. Append More Rows Safely
+Adds a new batch of fake records without erasing your current database entries:
+```bash
+php mock_data_script/seeder.php
+```
+
+*Note: The seeder script will print out a randomized temporary password when it runs successfully. Save it to log in with the fake users!*
+
+---
+
+## 🛠️ Main App Features
+
+*   **Security Gate (`login.php`):** Checks roles, verifies active accounts, enforces tokenized **CSRF defenses** on forms, and handles session security.
+*   **Live Dashboard (`dashboard-data.php`):** Pulls live database metrics directly into clean JavaScript tracking graphs.
+*   **Hiring Pipeline (`hiring.php`):** Add new candidates and move them down a multi-stage tracking workflow.
+*   **Employee Registry (`employees.php`):** Your main company directory sheet. Restricted so only Admins can make modifications.
+*   **System Settings (`settings.php`):** Admin-only area to add fresh departments and adjust pay bands.
+
+---
+
+## 🧪 Testing Checklist
+
+Run these quick checks to prove everything is working correctly:
+
+1.  **Security Barrier Check:** Try navigating to `http://localhost/EMPLOYEE-MANAGEMENT/employees.php` while logged out. You should be automatically kicked back to `login.php`.
+2.  **CSRF Form Test:** Open your browser's Developer Tools (`F12`), delete the hidden `csrf_token` input value from the login form, and hit submit. The backend should block your request.
+3.  **Hiring Lifecycle Loop:** Create a test candidate in **Hiring**. Change their status dropdown to **Hired**. Go open the **Employees** list; they will have automatically vanished from hiring and generated a brand-new staff record card.

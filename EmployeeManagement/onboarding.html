@@ -1,0 +1,73 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding - EMS</title>
+    <meta http-equiv="refresh" content="0; url=onboarding.php">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <!-- Sidebar Content identical to above, with Onboarding set to 'active' -->
+        <ul class="sidebar-menu">
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="employees.html">Employees</a></li>
+            <li><a href="hiring.html">Hiring <span class="badge">3</span></a></li>
+            <li><a href="onboarding.html" class="active">Onboarding</a></li>
+            <li><a href="performance.html">Performance</a></li>
+            <li><a href="hr-records.html">HR Records</a></li>
+            <li><a href="leave.html">Leave <span class="badge">2</span></a></li>
+            <li><a href="settings.html">Settings</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div>Onboarding</div>
+            <div>Acme Inc. - FY2026</div>
+        </header>
+        <div class="container">
+            <div class="page-title">
+                <div>
+                    <h1>Onboarding</h1>
+                    <p class="page-subtitle">Orientation, requirements, training and company policies - every new hire gets a clear checklist.</p>
+                </div>
+                <button class="btn-primary">New onboarding</button>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 1.1rem;">Liam Fitzgerald</div>
+                            <div class="stat-desc">Started 2024-11-04 - Buddy: Yuki Tanaka</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 700; font-size: 1.2rem;">62%</div>
+                            <div class="stat-desc">8/13 done</div>
+                        </div>
+                    </div>
+                    <div style="background: #e2e8f0; height: 8px; border-radius: 4px; margin-bottom: 20px;">
+                        <div style="background: #4f46e5; height: 100%; width: 62%; border-radius: 4px;"></div>
+                    </div>
+                    <!-- Checklists -->
+                    <div class="grid-2">
+                        <div style="border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 10px;">Orientation <span style="float:right; color:#718096;">3/3</span></div>
+                            <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;"><input type="checkbox" checked disabled> Day one orientation session</label>
+                            <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;"><input type="checkbox" checked disabled> Meet the team & assigned buddy</label>
+                        </div>
+                        <div style="border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 10px;">Requirements <span style="float:right; color:#718096;">3/4</span></div>
+                            <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;"><input type="checkbox" checked disabled> Signed employment contract</label>
+                            <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;"><input type="checkbox" disabled> Work equipment issued</label>
+                        </div>
+                    </div>
+                </div>
+                <!-- Duplicate this card structure for Yuki Tanaka (100% complete) -->
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -8,7 +8,12 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_only_cookies', '1');
 
     $scriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/'));
-    $cookiePath = rtrim(str_replace('\\', '/', dirname($scriptPath)), '/');
+    // Match the browser's URL path; Apache can decode spaces in SCRIPT_NAME.
+    $requestPath = explode('?', (string) ($_SERVER['REQUEST_URI'] ?? ''), 2)[0];
+    $cookieScriptPath = $requestPath !== ''
+        ? $requestPath
+        : implode('/', array_map('rawurlencode', explode('/', $scriptPath)));
+    $cookiePath = rtrim(str_replace('\\', '/', dirname($cookieScriptPath)), '/');
     $cookiePath = ($cookiePath === '' || $cookiePath === '.') ? '/' : $cookiePath . '/';
     $isHttps = (
         isset($_SERVER['HTTPS'])

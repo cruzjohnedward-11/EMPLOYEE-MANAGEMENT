@@ -239,14 +239,52 @@ $dialogConfig = $dialogConfigs[$pageKey] ?? null;
                     <label class="select-control"><span class="sr-only">Status</span><select name="status" onchange="this.form.submit()"><option value="">All statuses</option><?php foreach (['Active', 'Probation', 'Resigned', 'Terminated'] as $status): ?><option value="<?= ems_h($status) ?>"<?= $statusFilter === $status ? ' selected' : '' ?>><?= ems_h($status) ?></option><?php endforeach; ?></select></label>
                     <button class="filter-submit" type="submit">Search</button>
                 </form>
-                <?php if ($employeeFeedback): ?><p class="applicant-feedback" role="<?= $employeeFeedback['type'] === 'error' ? 'alert' : 'status' ?>"><?= ems_h($employeeFeedback['message']) ?></p><?php endif; ?>
+                <div class="corner-toast-container" id="corner-toast-container" aria-live="polite">
+                    <?php if ($employeeFeedback && $employeeFeedback['type'] === 'success' && !empty($employeeFeedback['updated_employee'])): ?>
+                        <?php $updatedEmp = $employeeFeedback['updated_employee']; ?>
+                        <aside class="corner-modal-toast" id="employee-corner-modal" role="status">
+                            <div class="corner-toast-header">
+                                <div class="corner-toast-title-wrap">
+                                    <span class="corner-toast-icon" aria-hidden="true"><?= ems_icon('check') ?></span>
+                                    <div>
+                                        <h4 class="corner-toast-title">Update Successful</h4>
+                                        <p class="corner-toast-emp"><?= ems_h($updatedEmp['full_name']) ?> <small>(<?= ems_h($updatedEmp['employee_number']) ?>)</small></p>
+                                    </div>
+                                </div>
+                                <button type="button" class="corner-toast-close" data-dismiss-corner-toast aria-label="Close notification">&times;</button>
+                            </div>
+                            <div class="corner-toast-body">
+                                <?php if (!empty($updatedEmp['changed_fields'])): ?>
+                                    <div class="corner-toast-changes-label">Changed Information:</div>
+                                    <ul class="corner-toast-changes-list">
+                                        <?php foreach ($updatedEmp['changed_fields'] as $change): ?>
+                                            <li class="corner-toast-change-row">
+                                                <span class="change-field-name"><?= ems_h($change['label']) ?></span>
+                                                <span class="change-transition">
+                                                    <span class="change-old"><?= ems_h($change['old']) ?></span>
+                                                    <span class="change-arrow" aria-hidden="true">&rarr;</span>
+                                                    <span class="change-new"><?= ems_h($change['new']) ?></span>
+                                                </span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php else: ?>
+                                    <p class="corner-toast-no-change">Saved with no field changes.</p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="corner-toast-progress-bar"><div class="corner-toast-progress"></div></div>
+                        </aside>
+                    <?php elseif ($employeeFeedback): ?>
+                        <p class="applicant-feedback" role="<?= $employeeFeedback['type'] === 'error' ? 'alert' : 'status' ?>"><?= ems_h($employeeFeedback['message']) ?></p>
+                    <?php endif; ?>
+                </div>
                 <section class="employee-browser" data-record-pager data-page-size="<?= (int) ($displayLimits['employee_page_size'] ?? 10) ?>">
                 <div class="card table-card employee-table-card">
                     <table class="data-table employee-table">
                         <thead><tr><th>Employee</th><th>Employee number</th><th>Role</th><th>Status</th><th>Base salary</th><th>Hired</th><?php if ($employeeCanWrite): ?><th><span class="sr-only">Actions</span></th><?php endif; ?></tr></thead>
                         <tbody>
                             <?php foreach ($employeeRows as $employee): ?>
-                                <tr data-paginated-row>
+                                <tr data-paginated-row data-employee-id="<?= (int) $employee['employee_id'] ?>">
                                     <td><span class="employee-cell"><span class="avatar <?= ems_h($employee['tone']) ?>"><?= ems_h($employee['initials']) ?></span><span><strong><?= ems_h($employee['name']) ?></strong><small><?= ems_h($employee['email']) ?></small></span></span></td>
                                     <td><?= ems_h($employee['employee_number']) ?></td>
                                     <td><?= ems_h($employee['role']) ?><small><?= ems_h($employee['department']) ?></small></td>

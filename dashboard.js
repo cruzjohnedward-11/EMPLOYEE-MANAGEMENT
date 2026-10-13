@@ -549,3 +549,216 @@ document.querySelectorAll('[data-export-table]').forEach((button) => {
         document.body.classList.toggle('edit-modal-open', openPopups().length > 0);
     }, true);
 })();
+
+// Employee Profile Update: Corner modal toast notification & in-place update
+(() => {
+    const escapeHtml = (str) => {
+        if (str === null || str === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
+    };
+
+    const dismissToast = (toast) => {
+        if (!toast || toast.dataset.dismissing === 'true') return;
+        toast.dataset.dismissing = 'true';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(16px) scale(0.95)';
+        window.setTimeout(() => toast.remove(), 220);
+    };
+
+    const setupToastTimer = (toast) => {
+        let timer = window.setTimeout(() => dismissToast(toast), 6500);
+        toast.addEventListener('mouseenter', () => {
+            window.clearTimeout(timer);
+            const bar = toast.querySelector('.corner-toast-progress');
+            if (bar) bar.style.animationPlayState = 'paused';
+        });
+        toast.addEventListener('mouseleave', () => {
+            const bar = toast.querySelector('.corner-toast-progress');
+            if (bar) bar.style.animationPlayState = 'running';
+            timer = window.setTimeout(() => dismissToast(toast), 2500);
+        });
+    };
+
+    const renderEmployeeCornerToast = (emp) => {
+        let container = document.querySelector('#corner-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'corner-toast-container';
+            container.className = 'corner-toast-container';
+            document.body.append(container);
+        }
+
+        const existingToast = container.querySelector('.corner-modal-toast');
+        if (existingToast) existingToast.remove();
+
+        let changesHtml = '';
+        if (emp.changed_fields && Object.keys(emp.changed_fields).length > 0) {
+            const rows = Object.values(emp.changed_fields).map((c) => `
+                <li class="corner-toast-change-row">
+                    <span class="change-field-name">${escapeHtml(c.label)}</span>
+                    <span class="change-transition">
+                        <span class="change-old">${escapeHtml(c.old)}</span>
+                        <span class="change-arrow" aria-hidden="true">&rarr;</span>
+                        <span class="change-new">${escapeHtml(c.new)}</span>
+                    </span>
+                </li>
+            `).join('');
+            changesHtml = `
+                <div class="corner-toast-changes-label">Changed Information:</div>
+                <ul class="corner-toast-changes-list">${rows}</ul>
+            `;
+        } else {
+            changesHtml = '<p class="corner-toast-no-change">Saved with no field changes.</p>';
+        }
+
+        const toast = document.createElement('aside');
+        toast.className = 'corner-modal-toast';
+        toast.id = 'employee-corner-modal';
+        toast.setAttribute('role', 'status');
+
+        toast.innerHTML = `
+            <div class="corner-toast-header">
+                <div class="corner-toast-title-wrap">
+                    <span class="corner-toast-icon" aria-hidden="true">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                    </span>
+                    <div>
+                        <h4 class="corner-toast-title">Update Successful</h4>
+                        <p class="corner-toast-emp">${escapeHtml(emp.full_name)} <small>(${escapeHtml(emp.employee_number)})</small></p>
+                    </div>
+                </div>
+                <button type="button" class="corner-toast-close" data-dismiss-corner-toast aria-label="Close notification">&times;</button>
+            </div>
+            <div class="corner-toast-body">
+                ${changesHtml}
+            </div>
+            <div class="corner-toast-progress-bar"><div class="corner-toast-progress"></div></div>
+        `;
+
+        container.append(toast);
+        setupToastTimer(toast);
+    };
+
+    // Close button click listener
+    document.addEventListener('click', (event) => {
+        const closeBtn = event.target.closest('[data-dismiss-corner-toast]');
+        if (!closeBtn) return;
+        const toast = closeBtn.closest('.corner-modal-toast');
+        dismissToast(toast);
+    });
+
+    // Auto-dismiss any server-rendered toast
+    const serverToast = document.querySelector('#employee-corner-modal');
+    if (serverToast) {
+        setupToastTimer(serverToast);
+    }
+
+    // Form submit listener for inline profile edits
+    document.addEventListener('submit', async (event) => {
+        const form = event.target.closest('.employee-edit-form');
+        if (!form) return;
+
+        event.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving profile...';
+        }
+
+        try {
+            const formData = new FormData(form);
+            const response = await fetch('employees.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            let result;
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error('Server returned non-JSON response');
+            }
+
+            if (!response.ok || result.status !== 'success' || !result.updated_employee) {
+                alert(result.message || 'Could not update employee profile.');
+                return;
+            }
+
+            const emp = result.updated_employee;
+
+            // Close the edit details popover
+            const details = form.closest('details.employee-edit');
+            if (details) details.open = false;
+
+            // Update corresponding table row in-place
+            const row = form.closest('tr');
+            if (row) {
+                // 1. Employee cell: small email under name
+                const emailSmall = row.querySelector('.employee-cell small');
+                if (emailSmall) emailSmall.textContent = emp.email || '';
+
+                // 2. Role & Department cell (3rd column)
+                const roleCell = row.children[2];
+                if (roleCell) {
+                    const textNode = [...roleCell.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
+                    if (textNode) {
+                        textNode.textContent = emp.job_title_name || 'Unassigned';
+                    }
+                    const deptSmall = roleCell.querySelector('small');
+                    if (deptSmall) {
+                        deptSmall.textContent = emp.department_name || 'Unassigned';
+                    }
+                }
+
+                // 3. Status cell (4th column)
+                const statusCell = row.children[3];
+                if (statusCell) {
+                    const pill = statusCell.querySelector('.pill');
+                    if (pill) {
+                        pill.textContent = emp.employment_status;
+                        pill.className = 'pill ' + (emp.employment_status === 'Probation'
+                            ? 'amber'
+                            : (['Resigned', 'Terminated'].includes(emp.employment_status) ? 'rose' : 'mint'));
+                    }
+                }
+
+                // 4. Update the form values inside this row so future edits start with updated data
+                const emailInput = form.querySelector('input[name="email"]');
+                if (emailInput) emailInput.value = emp.email || '';
+                const phoneInput = form.querySelector('input[name="phone_number"]');
+                if (phoneInput) phoneInput.value = emp.phone_number || '';
+                const addressInput = form.querySelector('input[name="address"]');
+                if (addressInput) addressInput.value = emp.address || '';
+                const emergencyInput = form.querySelector('input[name="emergency_contact"]');
+                if (emergencyInput) emergencyInput.value = emp.emergency_contact || '';
+                const deptSelect = form.querySelector('select[name="department_id"]');
+                if (deptSelect && emp.department_id) deptSelect.value = String(emp.department_id);
+                const jobSelect = form.querySelector('select[name="job_title_id"]');
+                if (jobSelect && emp.job_title_id) jobSelect.value = String(emp.job_title_id);
+                const statusSelect = form.querySelector('select[name="employment_status"]');
+                if (statusSelect) statusSelect.value = emp.employment_status;
+            }
+
+            // Render corner modal toast showing update successful and changed information
+            renderEmployeeCornerToast(emp);
+
+        } catch (error) {
+            console.warn('AJAX profile update failed, falling back to standard submit:', error);
+            form.submit();
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    });
+})();

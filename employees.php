@@ -16,12 +16,27 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET' && $_SERVER['REQUEST_METHOD'] !== 'POST
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+        || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
     if (!$employeeCanWrite) {
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorized to update employee profiles.']);
+            exit;
+        }
         http_response_code(403);
         exit('You are not authorized to update employee profiles.');
     }
 
     if (!ems_valid_csrf_token($_POST['csrf_token'] ?? null)) {
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Your session token is invalid. Refresh the page and try again.']);
+            exit;
+        }
         $_SESSION['employee_feedback'] = [
             'type' => 'error',
             'message' => 'Your session token is invalid. Refresh the page and try again.',
@@ -55,9 +70,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         || !is_string($statusValue)
         || !in_array($statusValue, $allowedStatuses, true)
     ) {
+        $errorMsg = 'Please check the employee profile fields and try again.';
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => $errorMsg]);
+            exit;
+        }
         $_SESSION['employee_feedback'] = [
             'type' => 'error',
-            'message' => 'Please check the employee profile fields and try again.',
+            'message' => $errorMsg,
         ];
         header('Location: employees.php', true, 303);
         exit;
@@ -65,9 +87,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     foreach ([$emailValue, $phoneValue, $addressValue, $emergencyContactValue] as $textValue) {
         if (preg_match('//u', $textValue) !== 1) {
+            $errorMsg = 'Profile text must use valid UTF-8.';
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['status' => 'error', 'message' => $errorMsg]);
+                exit;
+            }
             $_SESSION['employee_feedback'] = [
                 'type' => 'error',
-                'message' => 'Profile text must use valid UTF-8.',
+                'message' => $errorMsg,
             ];
             header('Location: employees.php', true, 303);
             exit;
@@ -80,9 +109,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'options' => ['min_range' => 1],
         ]);
         if ($departmentId === false) {
+            $errorMsg = 'Select a valid department.';
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['status' => 'error', 'message' => $errorMsg]);
+                exit;
+            }
             $_SESSION['employee_feedback'] = [
                 'type' => 'error',
-                'message' => 'Select a valid department.',
+                'message' => $errorMsg,
             ];
             header('Location: employees.php', true, 303);
             exit;
@@ -95,9 +131,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'options' => ['min_range' => 1],
         ]);
         if ($jobTitleId === false) {
+            $errorMsg = 'Select a valid job title.';
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['status' => 'error', 'message' => $errorMsg]);
+                exit;
+            }
             $_SESSION['employee_feedback'] = [
                 'type' => 'error',
-                'message' => 'Select a valid job title.',
+                'message' => $errorMsg,
             ];
             header('Location: employees.php', true, 303);
             exit;
@@ -137,6 +180,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            $fetchPrev = $pdo->prepare(
+                'SELECT e.employee_id, e.employee_number, e.first_name, e.last_name, e.full_name,
+                        e.email, e.phone_number, e.address, e.emergency_contact,
+                        e.department_id, e.job_title_id, e.employment_status,
+                        d.department_name, j.job_title_name
+                 FROM employees e
+                 LEFT JOIN departments d ON d.department_id = e.department_id
+                 LEFT JOIN job_titles j ON j.job_title_id = e.job_title_id
+                 WHERE e.employee_id = :employee_id'
+            );
+            $fetchPrev->execute(['employee_id' => $employeeId]);
+            $previous = $fetchPrev->fetch(PDO::FETCH_ASSOC);
+            if ($previous === false) {
+                throw new InvalidArgumentException('The employee profile was not found.');
+            }
+
             $update = $pdo->prepare(
                 'UPDATE employees
                  SET email = :email,
@@ -164,13 +223,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'employee_id' => $employeeId,
             ]);
 
-            if ($update->rowCount() === 0) {
-                $exists = $pdo->prepare('SELECT employee_id FROM employees WHERE employee_id = :employee_id');
-                $exists->execute(['employee_id' => $employeeId]);
-                if ($exists->fetchColumn() === false) {
-                    throw new InvalidArgumentException('The employee profile was not found.');
-                }
-            }
+            $fetchUpdated = $pdo->prepare(
+                'SELECT e.employee_id, e.employee_number, e.first_name, e.last_name, e.full_name,
+                        e.email, e.phone_number, e.address, e.emergency_contact,
+                        e.department_id, e.job_title_id, e.employment_status,
+                        d.department_name, j.job_title_name
+                 FROM employees e
+                 LEFT JOIN departments d ON d.department_id = e.department_id
+                 LEFT JOIN job_titles j ON j.job_title_id = e.job_title_id
+                 WHERE e.employee_id = :employee_id'
+            );
+            $fetchUpdated->execute(['employee_id' => $employeeId]);
+            $updated = $fetchUpdated->fetch(PDO::FETCH_ASSOC);
 
             // Future audit_log writes belong here, in the same transaction as the profile update.
             $pdo->commit();
@@ -181,20 +245,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw $exception;
         }
 
+        $fieldsToCompare = [
+            'email' => 'Email address',
+            'phone_number' => 'Phone number',
+            'address' => 'Address',
+            'emergency_contact' => 'Emergency contact',
+            'department_name' => 'Department',
+            'job_title_name' => 'Role / Job title',
+            'employment_status' => 'Employment status',
+        ];
+        $changedFields = [];
+        foreach ($fieldsToCompare as $key => $label) {
+            $oldVal = trim((string) ($previous[$key] ?? ''));
+            $newVal = trim((string) ($updated[$key] ?? ''));
+            if ($oldVal !== $newVal) {
+                $changedFields[$key] = [
+                    'label' => $label,
+                    'old' => $oldVal !== '' ? $oldVal : 'None',
+                    'new' => $newVal !== '' ? $newVal : 'None',
+                ];
+            }
+        }
+
+        $updatedInfo = [
+            'employee_id' => (int) $updated['employee_id'],
+            'employee_number' => (string) $updated['employee_number'],
+            'first_name' => (string) $updated['first_name'],
+            'last_name' => (string) $updated['last_name'],
+            'full_name' => (string) $updated['full_name'],
+            'email' => (string) ($updated['email'] ?? ''),
+            'phone_number' => (string) ($updated['phone_number'] ?? ''),
+            'address' => (string) ($updated['address'] ?? ''),
+            'emergency_contact' => (string) ($updated['emergency_contact'] ?? ''),
+            'department_id' => $updated['department_id'] !== null ? (int) $updated['department_id'] : null,
+            'department_name' => (string) ($updated['department_name'] ?? 'Unassigned'),
+            'job_title_id' => $updated['job_title_id'] !== null ? (int) $updated['job_title_id'] : null,
+            'job_title_name' => (string) ($updated['job_title_name'] ?? 'Unassigned'),
+            'employment_status' => (string) $updated['employment_status'],
+            'changed_fields' => $changedFields,
+            'updated_at' => date('M j, Y g:i A'),
+        ];
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Profile for ' . $updatedInfo['full_name'] . ' was updated successfully.',
+                'updated_employee' => $updatedInfo,
+            ]);
+            exit;
+        }
+
         $_SESSION['employee_feedback'] = [
             'type' => 'success',
-            'message' => 'Employee profile updated.',
+            'message' => 'Profile for ' . $updatedInfo['full_name'] . ' was updated successfully.',
+            'updated_employee' => $updatedInfo,
         ];
     } catch (InvalidArgumentException $exception) {
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(400);
+            echo json_encode([
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+            exit;
+        }
         $_SESSION['employee_feedback'] = [
             'type' => 'error',
             'message' => $exception->getMessage(),
         ];
     } catch (Throwable $exception) {
         error_log('EMS employee profile update failed (' . get_class($exception) . ').');
+        $errorMessage = 'The employee profile could not be updated. Please try again.';
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => $errorMessage,
+            ]);
+            exit;
+        }
         $_SESSION['employee_feedback'] = [
             'type' => 'error',
-            'message' => 'The employee profile could not be updated. Please try again.',
+            'message' => $errorMessage,
         ];
     }
 
@@ -280,7 +415,7 @@ try {
     if ($conditions !== []) {
         $query .= ' WHERE ' . implode(' AND ', $conditions);
     }
-    $query .= ' ORDER BY e.last_name, e.first_name, e.employee_id';
+    $query .= ' ORDER BY e.full_name ASC, e.employee_id ASC';
 
     $employeeStatement = $pdo->prepare($query);
     $employeeStatement->execute($parameters);

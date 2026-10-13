@@ -103,7 +103,7 @@ try {
          LEFT JOIN departments d ON d.department_id = e.department_id
          LEFT JOIN job_titles j ON j.job_title_id = e.job_title_id
          LEFT JOIN v_current_base_salary s ON s.employee_id = e.employee_id
-         ORDER BY e.last_name, e.first_name"
+         ORDER BY e.full_name ASC, e.employee_id ASC"
         )->fetchAll(PDO::FETCH_ASSOC);
         foreach ($employees as &$employee) {
             $employee['salary'] = (float) $employee['salary'];

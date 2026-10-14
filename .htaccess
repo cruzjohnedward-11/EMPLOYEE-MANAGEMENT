@@ -1,0 +1,14 @@
+Options -Indexes
+DirectoryIndex html/index.html
+
+RewriteEngine On
+RewriteRule (^|/)\. - [F,L]
+# Redirect to the actual directory so relative assets and session cookies agree.
+RewriteCond %{REQUEST_URI} ^(.*/)$
+RewriteRule ^$ %1php/login.php [R=307,L]
+RewriteCond %{REQUEST_URI} ^(.*/)[^/]+$
+RewriteRule ^([^/]+\.php)$ %1php/$1 [R=307,L]
+RewriteCond %{REQUEST_URI} ^(.*/)[^/]+$
+RewriteRule ^([^/]+\.html)$ %1html/$1 [R=307,L]
+RewriteRule ^(?:config|sql)(?:/|$) - [F,L]
+RewriteRule ^(?:Dockerfile|docker-compose\.yml|README\.md)$ - [F,L]

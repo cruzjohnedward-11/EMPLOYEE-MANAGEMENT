@@ -1,0 +1,9 @@
+desktop.ini
+Thumbs.db
+.env
+*.log
+sql/backups/
+.test-tools/
+__pycache__/
+.test-tools/
+__pycache__/
